@@ -54,3 +54,39 @@ tokens :-
     "("                         { TokenLParen }
     ")"                         { TokenRParen }
     ";"                         { TokenColon }
+
+{
+
+data Token = TokenInt Integer
+           | TokenFloat Double
+           | TokenString String
+           | TokenChar Character
+           | TokenSym String
+           | TokenAdd
+           | TokenMin
+           | TokenMul
+           | TokenDiv
+           | TokenAssign
+           | TokenLamVars
+           | TokenLamExpr
+           | TokenLT
+           | TokenLTE
+           | TokenEQ
+           | TokenNEQ
+           | TokenGTE
+           | TokenGT
+           | TokenAnd
+           | TokenOr
+           | TokenLet
+           | TokenLetRec
+           | TokenIn
+           | TokenCase
+           | TokenOf
+           | TokenArrow
+           | TokenPack
+           | TokenLBrace
+           | TokenRBrace
+           | TokenLParen
+           | TokenRParen
+           | TokenColon
+}
