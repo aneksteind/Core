@@ -7,7 +7,7 @@ data Expr a = EVar Name
             | ELet IsRec [(a, Expr a)] (Expr a)
             | ECase (Expr a) [Alter a]
             | ELam [a] (Expr a)
-            (deriving Show, Eq)
+            deriving (Show, Eq)
 
 type CoreExpr = Expr Name
 
