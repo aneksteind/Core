@@ -1,5 +1,7 @@
 module CorePrelude where
 
+import Types 
+
 preludeDefs :: CoreProgram
 preludeDefs = [ ("I", ["x"], EVar "x"),
     ("K", ["x","y"], EVar "x"),
@@ -8,4 +10,7 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
     (EAp (EVar "g") (EVar "x"))),
     ("compose", ["f","g","x"], EAp (EVar "f")
     (EAp (EVar "g") (EVar "x"))),
-    ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")) ]
+    ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f"))
+    --("H", ["y"], ELet True [("x", ENum 2),("x", ENum 2),("x", ENum 2),("x", ENum 2)] (ELam ["y", "z"] (ENum 5))),
+    --("A", ["x"], (EAp (EAp (EVar "+") (EVar "x")) (EVar "x")))
+     ]
