@@ -1,5 +1,5 @@
 {
-    module Lexer where
+module Lexer where
 }
 
 %wrapper "basic"
@@ -23,44 +23,43 @@ tokens :-
     $eol                        ;
     ";;".*                      ;
     $digit+                     { \s -> TokenInt (read s) }
-    @double                     { \s -> TokenFloat (read s) }
     @string                     { \s -> TokenString (init (tail s)) }
     @char                       { \s -> TokenChar (head (tail s)) }
     @id                         { \s -> TokenSym s }
-    [\+]                        { TokenAdd }
-    [\-]                        { TokenMin }
-    [\*]                        { TokenMul }
-    [\/]                        { TokenDiv }
-    [\=]                        { TokenAssign }
-    [\\]                        { TokenLamVars }
-    "."                         { TokenLamExpr }
-    "<"                         { TokenLT }
-    "<="                        { TokenLTE }
-    "=="                        { TokenEQ }
-    "/="                        { TokenNEQ }
-    ">="                        { TokenGTE }
-    ">"                         { TokenGT }
-    "&"                         { TokenAnd }
-    "|"                         { TokenOr }
-    let                         { TokenLet }
-    letrec                      { TokenLetRec }
-    in                          { TokenIn }
-    case                        { TokenCase }
-    of                          { TokenOf }
-    "->"                        { TokenArrow }
-    Pack                        { TokenPack }
-    "{"                         { TokenLBrace }
-    "}"                         { TokenRBrace }
-    "("                         { TokenLParen }
-    ")"                         { TokenRParen }
-    ";"                         { TokenColon }
+    [\+]                        { \s -> TokenAdd }
+    [\-]                        { \s -> TokenMin }
+    [\*]                        { \s -> TokenMul }
+    [\/]                        { \s -> TokenDiv }
+    [\=]                        { \s -> TokenAssign }
+    [\\]                        { \s -> TokenLamVars }
+    "."                         { \s -> TokenLamExpr }
+    "<"                         { \s -> TokenLT }
+    "<="                        { \s -> TokenLTE }
+    "=="                        { \s -> TokenEQ }
+    "/="                        { \s -> TokenNEQ }
+    ">="                        { \s -> TokenGTE }
+    ">"                         { \s -> TokenGT }
+    "&"                         { \s -> TokenAnd }
+    "|"                         { \s -> TokenOr }
+    let                         { \s -> TokenLet }
+    letrec                      { \s -> TokenLetRec }
+    in                          { \s -> TokenIn }
+    case                        { \s -> TokenCase }
+    of                          { \s -> TokenOf }
+    "->"                        { \s -> TokenArrow }
+    Pack                        { \s -> TokenPack }
+    "{"                         { \s -> TokenLBrace }
+    "}"                         { \s -> TokenRBrace }
+    "("                         { \s -> TokenLParen }
+    ")"                         { \s -> TokenRParen }
+    ";"                         { \s -> TokenSemiColon }
+    ","                         { \s -> TokenComma }
 
 {
 
 data Token = TokenInt Integer
-           | TokenFloat Double
            | TokenString String
-           | TokenChar Character
+           | TokenChar Char
            | TokenSym String
            | TokenAdd
            | TokenMin
@@ -88,5 +87,9 @@ data Token = TokenInt Integer
            | TokenRBrace
            | TokenLParen
            | TokenRParen
-           | TokenColon
+           | TokenSemiColon
+           | TokenComma
+           deriving (Eq, Show)
+
+scanTokens = alexScanTokens
 }
