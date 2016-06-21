@@ -202,7 +202,7 @@ alex_accept = listArray (0::Int,66) [AlexAccNone,AlexAccNone,AlexAccNone,AlexAcc
 {-# LINE 58 "Lexer.x" #-}
 
 
-data Token = TokenInt Integer
+data Token = TokenInt Int
            | TokenString String
            | TokenChar Char
            | TokenSym String

@@ -57,7 +57,7 @@ tokens :-
 
 {
 
-data Token = TokenInt Integer
+data Token = TokenInt Int
            | TokenString String
            | TokenChar Char
            | TokenSym String
