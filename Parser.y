@@ -49,27 +49,27 @@ import Types
 
 %%
 
-program : sc                                {}
-        | sc ';' program                    {}
+program : sc                                { [$1] }
+        | sc ';' program                    { $1 : $3 }
 
-sc : var var vars '=' expr                  {}
+sc : var vars '=' expr                      { ($1, $2, $4) }
 
 vars :                                      { [] }
      | var vars                             { $1 : $2 }
 
 expr : expr aexpr                           { EAp $1 $2 }
-     | expr '+' expr                        {}
-     | expr '-' expr                        {}
-     | expr '*' expr                        {}
-     | expr '/' expr                        {}
-     | expr and expr                        {}
-     | expr or expr                         {}
-     | expr lt expr                         {}
-     | expr lte expr                        {}
-     | expr eq expr                         {}
-     | expr neq expr                        {}
-     | expr gte expr                        {}
-     | expr gt expr                         {}
+     | expr '+' expr                        { EAp (EAp (EVar "+") $1) $3 }
+     | expr '-' expr                        { EAp (EAp (EVar "-") $1) $3 }
+     | expr '*' expr                        { EAp (EAp (EVar "*") $1) $3 }
+     | expr '/' expr                        { EAp (EAp (EVar "/") $1) $3 }
+     | expr and expr                        { EAp (EAp (EVar "and") $1) $3 }
+     | expr or expr                         { EAp (EAp (EVar "or") $1) $3 }
+     | expr lt expr                         { EAp (EAp (EVar "<") $1) $3 }
+     | expr lte expr                        { EAp (EAp (EVar "<=") $1) $3 }
+     | expr eq expr                         { EAp (EAp (EVar "==") $1) $3 }
+     | expr neq expr                        { EAp (EAp (EVar "/=") $1) $3 }
+     | expr gte expr                        { EAp (EAp (EVar ">=") $1) $3 }
+     | expr gt expr                         { EAp (EAp (EVar ">") $1) $3 }
      | let defns in expr                    { ELet nonRecursive $2 $4 }
      | letrec defns in expr                 { ELet recursive $2 $4 }
      | case expr of alts                    { ECase $2 $4 }
@@ -81,15 +81,15 @@ aexpr : var                                 { EVar $1 }
       | Pack '{' int ',' int '}'            { EConstr $3 $5 }
       | '('expr')'                          { $2 }
 
-defns : defn                                {}
-      | defn ';' defns                      {}
+defns : defn                                { [$1] }
+      | defn ';' defns                      { $1 : $3 }
 
-defn : var '=' expr                         {}
+defn : var '=' expr                         { ($1, $3) }
 
-alts : alt ';'                              {}
-     | alt alts                             {}
+alts : alt ';'                              { [$1] }
+     | alt alts                             { $1 : $2 }
 
-alt : lt int gt vars arrow expr             { $2 }
+alt : lt int gt vars arrow expr             { ($2, $4, $6) }
 
 {
 
