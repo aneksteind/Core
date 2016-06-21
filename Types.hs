@@ -1,5 +1,7 @@
 module Types where
 
+-- GRAMMAR
+
 data Expr a = EVar Name
             | ENum Int
             | EConstr Int Int
@@ -41,3 +43,11 @@ isAtomicExpr (EVar v) = True
 isAtomicExpr (ENum n) = True
 isAtomicExpr e = False
 
+-- PRETTY PRINTER
+
+data Iseq = INil
+          | IStr String
+          | IAppend Iseq Iseq
+          | IIndent Iseq
+          | INewline
+          deriving (Show, Eq)
