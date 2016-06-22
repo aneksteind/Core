@@ -8,7 +8,7 @@ import CorePrelude
 
 main :: IO ()
 main = do
-    unParsed <- getContents
+    unParsed <- readFile "prelude.cor"
     let scanned = scanTokens unParsed
     let parsed = parseTokens scanned
     putStr $ pprint parsed
