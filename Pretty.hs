@@ -11,12 +11,22 @@ pprProgram scdefns = flip iAppend iNewline (iInterleave iNewline $ map pprScDefn
 pprScDefn :: CoreScDefn -> Iseq
 pprScDefn (name, vars, expr) = 
     (iStr name) `iAppend` iStr " " `iAppend` (iInterleave (iStr " ") (map iStr vars))
-     `iAppend` iStr " = " `iAppend` (pprExpr expr)
+     `iAppend` maybeSpace `iAppend` (pprExpr expr)
+     where maybeSpace = case vars of [] -> iStr "= "
+                                     _ -> iStr " = "
 
 pprExpr :: CoreExpr -> Iseq
 pprExpr (ENum n) = iNum n
 pprExpr (EVar v) = iStr v
 pprExpr (EAp (EAp (EVar "+") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "-") e1) e2) = iConcat [ pprAExpr e1, iStr " - ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "*") e1) e2) = iConcat [ pprAExpr e1, iStr " * ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "/") e1) e2) = iConcat [ pprAExpr e1, iStr " / ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "<") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "<=") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar "==") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar ">=") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar ">") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
 pprExpr (EAp e1 e2) = (pprExpr e1) `iAppend` (iStr " ") `iAppend` (pprAExpr e2)
 pprExpr (ELet isrec defns expr) =
     iConcat [ iStr keyword, iIndent (pprDefns defns), iStr " in " `iAppend` pprExpr expr ]
@@ -98,7 +108,8 @@ iConcat :: [Iseq] -> Iseq
 iConcat iseqs = foldr (\iseq acc -> iseq `iAppend` acc) iNil iseqs
 
 iInterleave :: Iseq -> [Iseq] -> Iseq
-iInterleave sep (i:iseqs) = iConcat $ i : prependToAll sep iseqs
+iInterleave sep (i:is) = iConcat $ i : prependToAll sep is
+iInterleave sep [] = iNil
 
 prependToAll sep (i:is) = sep : (i : prependToAll sep is)
 prependToAll sep [] = [] 
