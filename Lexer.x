@@ -21,7 +21,7 @@ tokens :-
     
     $white+                     ;
     $eol                        ;
-    ";;".*                      ;
+    "--".*                      ;
     $digit+                     { \s -> TokenInt (read s) }
     @string                     { \s -> TokenString (init (tail s)) }
     @char                       { \s -> TokenChar (head (tail s)) }
