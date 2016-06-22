@@ -6,7 +6,7 @@ pprint :: CoreProgram -> String
 pprint prog = iDisplay (pprProgram prog)
 
 pprProgram :: CoreProgram -> Iseq
-pprProgram scdefns = flip iAppend iNewline (iInterleave iNewline $ map pprScDefn scdefns)
+pprProgram scdefns = flip iAppend iNewline (iInterleave (iStr ";" `iAppend` iNewline) $ map pprScDefn scdefns)
 
 pprScDefn :: CoreScDefn -> Iseq
 pprScDefn (name, vars, expr) = 
