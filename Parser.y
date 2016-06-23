@@ -16,7 +16,7 @@ import Types
     '*'             { TokenMul }
     '/'             { TokenDiv }
     '='             { TokenAssign }
-    '\\'            { TokenLamVars }
+    lambda            { TokenLamVars }
     '.'             { TokenLamExpr }
     lt              { TokenLT }
     lte             { TokenLTE }
@@ -42,10 +42,10 @@ import Types
 
 
 
-%right
-%nonassoc gt lt gte lte eq neq and or '=' '.' Pack int var in '/' arrow '}' '{' '(' ')' '\\' ';' ','
+%right ';'
+%nonassoc gt lt gte lte eq neq '.' Pack int var in arrow '}' '{' '(' ')'
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' and or
 
 %%
 
@@ -73,7 +73,7 @@ expr : expr aexpr                           { EAp $1 $2 }
      | let defns in expr                    { ELet nonRecursive $2 $4 }
      | letrec defns in expr                 { ELet recursive $2 $4 }
      | case expr of alts                    { ECase $2 $4 }
-     | '\\' var vars '.' expr               { ELam ($2 : $3) $5 }
+     | lambda var vars '.' expr               { ELam ($2 : $3) $5 }
      | aexpr                                { $1 }
 
 aexpr : var                                 { EVar $1 }
@@ -86,8 +86,8 @@ defns : defn                                { [$1] }
 
 defn : var '=' expr                         { ($1, $3) }
 
-alts : alt ';'                              { [$1] }
-     | alt alts                             { $1 : $2 }
+alts : alt ';'                                 { [$1] }
+     | alt ';' alts                         { $1 : $3 }
 
 alt : lt int gt vars arrow expr             { ($2, $4, $6) }
 
