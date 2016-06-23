@@ -25,7 +25,6 @@ tokens :-
     $digit+                     { \s -> TokenInt (read s) }
     @string                     { \s -> TokenString (init (tail s)) }
     @char                       { \s -> TokenChar (head (tail s)) }
-    @id                         { \s -> TokenSym s }
     [\+]                        { \s -> TokenAdd }
     [\-]                        { \s -> TokenMin }
     [\*]                        { \s -> TokenMul }
@@ -54,6 +53,7 @@ tokens :-
     ")"                         { \s -> TokenRParen }
     ";"                         { \s -> TokenSemiColon }
     ","                         { \s -> TokenComma }
+    @id                         { \s -> TokenSym s }
 
 {
 
