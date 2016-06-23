@@ -33,20 +33,26 @@ pprExpr (ELet isrec defns expr) =
               where keyword | not isrec = "let"
                             | isrec = "letrec"
 pprExpr (ECase e1 patterns) =
-    iConcat [ iStr "case ", (pprExpr e1), iStr " of ", pprPatterns patterns ]
+    iConcat [ iStr "case ", (pprExpr e1), iStr " of ", iIndent $ pprPatterns patterns ]
 pprExpr (ELam vars expr) = 
     iConcat [ iStr "(lambda (", iInterleave (iStr " ") (map iStr vars),
               iStr ") ", pprExpr expr, iStr ")"]
+pprExpr (EConstr i1 i2) = iConcat [ iStr "Pack {", iStr $ show i1,
+                                    iStr ", ", iStr $ show i2, iStr "}"]
 
 
 pprPatterns :: [CoreAlt] -> Iseq
-pprPatterns patterns = iConcat $ map pprPattern patterns
+pprPatterns patterns = 
+  iNewline `iAppend` iInterleave (iStr "; " `iAppend` iNewline) (map pprPattern patterns)
 
 pprPattern :: CoreAlt -> Iseq
-pprPattern (int, vars, result) = iConcat $
+pprPattern (int, vars@(v:vs), result) = iConcat $
     [iStr "<", iStr $ show int, iStr "> ",
      iInterleave (iStr " ") (map iStr vars),
-     iStr " -> ", pprExpr result, iNewline]
+     iStr " -> ", pprExpr result]
+pprPattern (int, [], result) = iConcat $
+    [iStr "<", iStr $ show int, iStr ">",
+     iStr " -> ", pprExpr result]
 
 pprDefns :: [(Name, CoreExpr)] -> Iseq
 pprDefns defns = iNewline `iAppend` iInterleave sep (map pprDefn defns)
