@@ -1,5 +1,6 @@
 module Types where
-
+import Data.Heap
+import Data.Map
 -- GRAMMAR
 
 data Expr a = EVar Name
@@ -51,3 +52,45 @@ data Iseq = INil
           | IIndent Iseq
           | INewline
           deriving (Show, Eq)
+
+-- GMACHINE COMPILER
+
+type GmState = (GmCode,     -- current instruction stream
+                GmStack,    -- current stack
+                GmHeap,     -- heap of nodes
+                GmGlobals,  -- global addresses in heap
+                GmStats)    -- statistics
+
+type GmCode = [Instruction]
+
+type GmStack = [Addr]
+
+type GmHeap = Heap Node
+
+type GmGlobals = ASSOC Name Addr
+
+type GmStats = Int
+
+data Instruction = Unwind
+                 | Pushglobal Name
+                 | Pushint Int
+                 | Push Int
+                 | Mkap
+                 | Slide Int
+
+data Node = NNum Int -- Numbers
+          | NAp Addr Addr -- Applications
+          | NGlobal Int GmCode -- Globals
+
+instance Eq Instruction where
+  Unwind == Unwind = True
+  Pushglobal a == Pushglobal b = a == b
+  Pushint a == Pushint b = a == b
+  Push a == Push b = a == b
+  Mkap == Mkap = True
+  Slide a == Slide b = a == b
+  _ == _ = False
+
+type Heap a = (Int, [Int], [(Int, a)])
+type ASSOC k a = Map k a
+type Addr = Int
