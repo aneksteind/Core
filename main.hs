@@ -6,12 +6,11 @@ import Pretty
 import Types
 import CorePrelude
 import System.Environment
+import GMachine
 
 main :: IO ()
 main = do
     (file:_) <- getArgs
     unParsed <- readFile file
-    let scanned = scanTokens unParsed
-    print scanned
-    let parsed = parseTokens scanned
+    let parsed = parseTokens $ scanTokens unParsed
     putStr $ pprint parsed
