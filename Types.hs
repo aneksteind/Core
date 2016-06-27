@@ -1,5 +1,4 @@
 module Types where
-import Data.Heap
 import Data.Map
 -- GRAMMAR
 
