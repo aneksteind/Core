@@ -1,0 +1,11 @@
+f = 3 ;
+h x = case (\x . 2) of
+<1> -> 2 ;
+<2> -> 5 ;;
+g x y = let z = x in z;
+f x y = case x of
+    <1> -> case (let x = y in y + 2) of
+        <1> -> 1;;
+    <2> -> 2;;
+x = Pack{1,2};
+x = 1 + 2 - 3 / 5 * 6
