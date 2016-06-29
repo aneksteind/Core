@@ -1,6 +1,8 @@
 module Pretty where
 
 import Types
+import GMachine
+import Data.Map (toList)
 
 pprint :: CoreProgram -> String
 pprint prog = iDisplay (pprProgram prog)
@@ -124,3 +126,62 @@ prependToAll sep [] = []
 mkMultiAp :: Int -> CoreExpr -> CoreExpr -> CoreExpr
 mkMultiAp n e1 e2 = foldl EAp e1 (take n e2s)
                         where e2s = e2 : e2s
+
+--------------------------- SHOW COMPILATION ---------------------------
+
+showResults :: [GmState] -> [Char]
+showResults states = iDisplay (iConcat [
+  iNewline, iStr "-----Supercombinator definitions-----", iNewline, iNewline,
+  iInterleave iNewline (map (showSC s) (toList $ getGlobals s)),
+  iNewline, iNewline, iStr "-----State transitions-----", iNewline, iNewline,
+  iLayn (map showState states), iNewline,
+  showStats (last states)]) where (s:ss) = states
+
+showSC :: GmState -> (Name, Addr) -> Iseq
+showSC s (name, addr) = 
+  let maybeAdd = (hLookup (getHeap s) addr)
+  in case maybeAdd of Just (NGlobal arity code) -> showSCresult name code
+                      Nothing -> error "global not found in heap"
+
+showSCresult :: Name -> GmCode -> Iseq
+showSCresult name code = iConcat [ iStr "Code for ",
+        iStr name, iNewline, showInstructions code, iNewline, iNewline]
+
+showInstructions :: GmCode -> Iseq
+showInstructions is = iConcat [iStr " Code:{",
+  iIndent (iInterleave iNewline (map showInstruction is)),
+  iStr "}", iNewline]
+
+showInstruction :: Instruction -> Iseq
+showInstruction Unwind = iStr "Unwind"
+showInstruction (Pushglobal f) = (iStr "Pushglobal ") `iAppend` (iStr f)
+showInstruction (Push n) = (iStr "Push ") `iAppend` (iNum n)
+showInstruction (Pushint n) = (iStr "Pushint ") `iAppend` (iNum n)
+showInstruction Mkap = iStr "Mkap"
+showInstruction (Slide n) = (iStr "Slide ") `iAppend` (iNum n)
+
+showState :: GmState -> Iseq
+showState s = iConcat [showStack s, iNewline,
+  showInstructions (getCode s), iNewline]
+
+showStack :: GmState -> Iseq
+showStack s = iConcat [iStr " Stack:[",
+  iIndent (iInterleave iNewline
+  (map (showStackItem s) (reverse (getStack s)))),
+  iStr "]"]
+
+showStackItem :: GmState -> Addr -> Iseq
+showStackItem s a = 
+  let maybeAddress = (hLookup (getHeap s) a) in
+    case maybeAddress of Just address -> iConcat [iStr (showaddr a), iStr ": ", showNode s a address]
+                         Nothing -> error "showStackItem: node not found in heap"
+
+showNode :: GmState -> Addr -> Node -> Iseq
+showNode s a (NNum n) = iNum n
+showNode s a (NGlobal n g) = iConcat [iStr "Global ", iStr v]
+  where v = head [n | (n,b) <- toList $ getGlobals s, a==b]
+showNode s a (NAp a1 a2) = iConcat [iStr "Ap ", iStr (showaddr a1),
+  iStr " ", iStr (showaddr a2)]
+
+showStats :: GmState -> Iseq
+showStats s = iConcat [ iStr "Steps taken = ", iNum (statGetSteps (getStats s))]
