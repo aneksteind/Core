@@ -19,8 +19,10 @@ compile program = (initialCode, [], heap, globals, statInitial) where
 buildInitialHeap :: CoreProgram -> (GmHeap, GmGlobals)
 buildInitialHeap program = (heap, Map.fromList globals) where
     (heap, globals) = mapAccumL allocateSc hInitial compiled
-    compiled = map compileSc program :: [GmCompiledSC]
-    -- map compileSc (preludeDefs ++ program) ++ compiledPrimitives
+    compiled = map compileSc (preludeDefs ++ program) ++ compiledPrimitives :: [GmCompiledSC]
+
+compiledPrimitives :: [GmCompiledSC]
+compiledPrimitives = []
 
 -- creates a tuple of a heap, and a name/address pair
 allocateSc :: GmHeap -> GmCompiledSC -> (GmHeap, (Name, Addr))
