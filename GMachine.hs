@@ -2,7 +2,7 @@ module GMachine where
 
 import Types
 import Parser
-import qualified Data.Map as M (lookup)
+import qualified Data.Map as M (lookup, insert)
 
 --runProg :: [Char] -> [Char]
 --runProg = showResults . compile . parse
@@ -32,6 +32,11 @@ putHeap newHeap (i, stack, oldHeap, globals, stats) =
 
 getGlobals :: GmState -> GmGlobals
 getGlobals (i, stack, heap, globals, stats) = globals
+
+putGlobals :: Name -> Addr -> GmState -> GmState
+putGlobals name addr (code, stack, heap, globals, stats) = 
+  let newGlobals = M.insert name addr globals
+  in (code, stack, heap, newGlobals, stats)
 
 getStats :: GmState -> GmStats
 getStats (i, stack, heap, globals, stats) = stats
@@ -138,13 +143,16 @@ dispatch Unwind = unwind
 pushglobal :: Name -> GmState -> GmState
 pushglobal f state =  let a = M.lookup f (getGlobals state) in
   case a of Just add -> putStack (add: getStack state) state
-            Nothing  -> error "pushglobal: global name not found in globals"
+            Nothing  -> error ("pushglobal: global " ++ f ++ " not found in globals")
  
 -- pushes an integer node onto the heap
 pushint :: Int -> GmState -> GmState
-pushint n state =
- putHeap newHeap (putStack (a: getStack state) state) where
-  (newHeap, a) = hAlloc (getHeap state) (NNum n)
+pushint n state = 
+  let maybeAddr = M.lookup (show n) (getGlobals state)
+      pushintHelper s = putHeap newHeap (putStack (a: getStack s) s)
+      (newHeap, a) = hAlloc (getHeap state) (NNum n) in
+  case maybeAddr of Just addr -> (putStack (addr: getStack state) state) where
+                    Nothing -> pushintHelper $ putGlobals (show n) a state
 
 -- takes the 2 addresses at the top of the address stack
 -- and combines them into one address
