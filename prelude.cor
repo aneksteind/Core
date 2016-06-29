@@ -1,3 +1,4 @@
+main = 0;
 I x = x;
 K x y = x;
 K1 x y = y;
