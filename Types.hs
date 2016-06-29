@@ -1,6 +1,7 @@
 module Types where
 import Data.Map
--- GRAMMAR
+
+--------------------------- GRAMMAR ---------------------------
 
 data Expr a = EVar Name
             | ENum Int
@@ -43,7 +44,7 @@ isAtomicExpr (EVar v) = True
 isAtomicExpr (ENum n) = True
 isAtomicExpr e = False
 
--- PRETTY PRINTER
+--------------------------- PRINTER ---------------------------
 
 data Iseq = INil
           | IStr String
@@ -52,7 +53,7 @@ data Iseq = INil
           | INewline
           deriving (Show, Eq)
 
--- GMACHINE COMPILER
+--------------------------- GMACHINE ---------------------------
 
 type GmState = (GmCode,     -- current instruction stream
                 GmStack,    -- current stack
@@ -81,6 +82,12 @@ data Node = NNum Int -- Numbers
           | NAp Addr Addr -- Applications
           | NGlobal Int GmCode -- Globals
 
+type Heap a = (Int, [Int], [(Int, a)])
+
+type ASSOC k a = Map k a
+
+type Addr = Int
+
 instance Eq Instruction where
   Unwind == Unwind = True
   Pushglobal a == Pushglobal b = a == b
@@ -90,6 +97,18 @@ instance Eq Instruction where
   Slide a == Slide b = a == b
   _ == _ = False
 
-type Heap a = (Int, [Int], [(Int, a)])
-type ASSOC k a = Map k a
-type Addr = Int
+--------------------------- COMPILER ---------------------------
+
+type GmCompiledSC = (Name, Int, GmCode)
+
+type GmCompiler = CoreExpr -> GmEnvironment -> GmCode
+
+type GmEnvironment = ASSOC Name Int
+
+
+
+
+
+
+
+
