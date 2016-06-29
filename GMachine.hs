@@ -8,8 +8,6 @@ import qualified Data.Map as M (lookup)
 --runProg = showResults . compile . parse
 
 
---main = putStrLn "Success!"
-
 --------------------------- GET/SET GMSTATE ---------------------------
 
 getCode :: GmState -> GmCode
@@ -53,14 +51,14 @@ statGetSteps s = s
 
 --------------------------- HEAP FUNCTIONS ---------------------------
 hInitial :: Heap a
-hInitial = (0, [1..], [])
+hInitial = (0, 1, [])
 
 -- pairs the next free address with the supplied node
 -- increases the size of the heap by 1
 -- adds the pair to the heap
 -- returns the new heap and the new address that was added
 hAlloc :: Heap a -> a -> (Heap a, Addr)
-hAlloc (size, (next:free), cts) n = ((size+1, free, (next,n) : cts),next)
+hAlloc (size, address, cts) n = ((size+1, address+1, (address,n) : cts),address)
 
 -- replaces a the node at address "a" with a new node "n"
 -- TODO: see remove function
@@ -69,8 +67,8 @@ hUpdate (size, free, cts) a n = (size, free, (a,n) : remove cts a)
 
 -- removes a (Name,Address) pair
 -- adds the address back to the available list
-hFree :: Heap a -> Addr -> Heap a
-hFree (size, free, cts) a = (size-1, a:free, remove cts a)
+--hFree :: Heap a -> Addr -> Heap a
+--hFree (size, free, cts) a = (size-1, a:free, remove cts a)
 
 -- looks up a node in a heap
 hLookup :: Heap Node -> Addr -> Maybe Node
