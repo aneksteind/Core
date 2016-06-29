@@ -11,7 +11,10 @@ import Compiler
 main :: IO ()
 main = do
     (file:_) <- getArgs
-    unParsed <- readFile file
-    let parsed = parseTokens $ scanTokens unParsed
-    print $ eval (compile parsed)
+    contents <- readFile file
+    run contents
 --  putStr $ pprint parsed
+
+run = putStrLn . showResults 
+    . eval . compile 
+    . parseTokens . scanTokens
