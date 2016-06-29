@@ -1,4 +1,4 @@
-module GMachine (eval) where
+module GMachine where
 
 import Types
 import Parser
@@ -7,9 +7,10 @@ import qualified Data.Map as M (lookup)
 --runProg :: [Char] -> [Char]
 --runProg = showResults . compile . parse
 
--- GET SET FUNCTIONS ON 
 
-main = putStrLn "Success!"
+--main = putStrLn "Success!"
+
+--------------------------- GET/SET GMSTATE ---------------------------
 
 getCode :: GmState -> GmCode
 getCode (code, stack, heap, globals, stats) = code
@@ -50,7 +51,7 @@ statIncSteps s = s+1
 statGetSteps :: GmStats -> Int
 statGetSteps s = s
 
--- HEAP FUNCTIONS
+--------------------------- HEAP FUNCTIONS ---------------------------
 hInitial :: Heap a
 hInitial = (0, [1..], [])
 
@@ -97,7 +98,7 @@ remove [] a = []
 remove ((val,n):cts) match | match == val = cts
                       | match /= val = (val,n) : remove cts match
 
--- EVALUATOR
+--------------------------- EVALUATOR ---------------------------
 
 -- executes the g-machine by executing each instruction
 -- each execution of an instruction is cons'ed to the list
@@ -139,7 +140,7 @@ dispatch Unwind = unwind
 pushglobal :: Name -> GmState -> GmState
 pushglobal f state =  let a = M.lookup f (getGlobals state) in
   case a of Just add -> putStack (add: getStack state) state
-            Nothing  -> state
+            Nothing  -> error "pushglobal: global name not found in globals"
  
 -- pushes an integer node onto the heap
 pushint :: Int -> GmState -> GmState
@@ -166,7 +167,7 @@ push n state =
   let as = getStack state
       a = getArg =<< hLookup (getHeap state) (as !! (n+1)) in
       case a of Just add -> putStack (add:as) state
-                Nothing  -> state
+                Nothing  -> error "push: address not found in heap"
   
 
 getArg :: Node -> Maybe Addr
@@ -193,4 +194,4 @@ unwind state =
       newState (NGlobal n c) | length as < n = putCode [] state
                              | otherwise = putCode c state in
       case n of Just node -> newState node        
-                Nothing -> state 
+                Nothing -> error "unwind: address not found in heap"
