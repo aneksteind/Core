@@ -76,13 +76,14 @@ data Instruction = Unwind
                  | Pushint Int
                  | Push Int
                  | Mkap
-                 | Slide Int
+                 | Slide Int deriving (Show)
 
 data Node = NNum Int -- Numbers
           | NAp Addr Addr -- Applications
           | NGlobal Int GmCode -- Globals
+          deriving (Show)
 
-type Heap a = (Int, [Int], [(Int, a)])
+type Heap a = (Int, Addr, [(Int, a)])
 
 type ASSOC k a = Map k a
 
