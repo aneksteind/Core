@@ -5,7 +5,7 @@ import GMachine
 import Data.List
 import qualified Data.Map as Map (keys, fromList, map, lookup)
 
-main =  putStrLn "Success!"
+
 
 -- turns a program into an initial state for the gmachine
 -- finds the main super combinator and evaluates it
