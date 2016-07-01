@@ -183,7 +183,7 @@ showNode s a (NGlobal n g) = iConcat [iStr "Global ", iStr v]
   where v = head [n | (n,b) <- toList $ getGlobals s, a==b]
 showNode s a (NAp a1 a2) = iConcat [iStr "Ap ", iStr (showaddr a1),
   iStr " ", iStr (showaddr a2)]
-showNode s a (NInd ia) = iConcat [iStr "Ap ", iStr (showaddr ia)]
+showNode s a (NInd ia) = iConcat [iStr "Ind ", iStr (showaddr ia)]
 
 showStats :: GmState -> Iseq
 showStats s = iConcat [ iStr "Steps taken = ", iNum (statGetSteps (getStats s))]
