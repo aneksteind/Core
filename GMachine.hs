@@ -138,6 +138,8 @@ dispatch (Push n) = push n
 dispatch (Pop n) = pop n
 dispatch (Update n) = update n
 dispatch Unwind = unwind
+dispatch (Slide n) = slide n
+dispatch (Alloc n) = alloc n
 
 -- finds a unique global node in the heap
 -- puts the address of the global node at the top of the stack
@@ -165,22 +167,25 @@ mkap state =
   (a1:a2:addresses) = getStack state
 
 -- gets the current address stack
--- looks up the node with the (n+1)th address in the stack
--- takes the second argument of the apply node that is found
--- (f `apply` a, a is the node who's addess we retrieve)
--- we add this pointer (the address we retrieved) to the top of the stack
+-- pushes the A(nth) address on top of the stack
 push :: Int -> GmState -> GmState
 push n state = 
   let as = getStack state
-      a = getArg =<< hLookup (getHeap state) (as !! (n+1)) in
-      case a of Just add -> putStack (add:as) state
-                Nothing  -> error "push: address not found in heap"
+      a = (as !! n) in putStack (a:as) state
+
+-- takes the address at the top of the stack
+-- drops the next n addresses from the stack
+-- reattaches the address to the stack
+slide :: Int -> GmState -> GmState
+slide n state = putStack (a : drop n as) state where
+  (a:as) = getStack state
 
 update :: Int -> GmState -> GmState
 update n state = 
   let (a:as) = getStack state
   in putHeap (hUpdate (getHeap state) (as !! n) (NInd a)) (putStack as state)
 
+-- TODO: better error handling
 getArg :: Node -> Maybe Addr
 getArg (NAp a1 a2) = return a2
 
@@ -197,16 +202,38 @@ pop n state = putStack (drop n stack) state where
 -- if NGlobal then we put it's code to the state and continue
 unwind :: GmState -> GmState
 unwind state = 
-  let n = (hLookup heap a)
-      (a:as) = getStack state
+  let stack@(a:as) = getStack state
       heap = getHeap state
+      replaceAddrs i = putStack (rearrange i heap stack)
+      n = (hLookup heap a)
       newState (NNum n) = state
       newState (NAp a1 a2) = putCode [Unwind] (putStack (a1:a:as) state)
       newState (NInd ia) = putCode [Unwind] (putStack (ia:as) state)
-      newState (NGlobal n c) | length as < n = putCode [] state
-                             | otherwise = putCode c state in
+      newState (NGlobal na c) | length as < na = putCode [] state
+                             | otherwise = replaceAddrs na $ putCode c state in
       case n of Just node -> newState node        
                 Nothing -> error "unwind: address not found in heap"
+
+-- replaces the application node addresses in the stack with
+-- the addresses of the value being applied to
+rearrange :: Int -> GmHeap -> GmStack -> GmStack
+rearrange n heap as = 
+  let newAs = mapM ((getArg =<<) . hLookup heap) (tail as) in
+  case newAs of Just addrs -> take n addrs ++ drop n as
+                Nothing -> error "rearrange: address not found in heap" 
+  
+alloc :: Int -> GmState -> GmState
+alloc n state = let (newHeap, addrs) = allocNodes n (getHeap state)
+                    stack = getStack state in
+  putHeap newHeap $ putStack (addrs ++ stack) state
+
+allocNodes :: Int -> GmHeap -> (GmHeap, [Addr])
+allocNodes 0 heap = (heap, [])
+allocNodes n heap = (heap2, a:as) where
+  (heap1, as) = allocNodes (n-1) heap
+  (heap2, a) = hAlloc heap1 (NInd hNull)
+
+
 
 
 --unwindAll :: GmState -> GmCode

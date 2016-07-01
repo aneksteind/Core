@@ -77,7 +77,9 @@ data Instruction = Unwind
                  | Push Int
                  | Mkap
                  | Update Int
-                 | Pop Int deriving (Show)
+                 | Pop Int 
+                 | Slide Int
+                 | Alloc Int deriving (Show)
 
 instance Eq Instruction where
   Unwind == Unwind = True

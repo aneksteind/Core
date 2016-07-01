@@ -160,6 +160,8 @@ showInstruction (Pushint n) = (iStr "Pushint ") `iAppend` (iNum n)
 showInstruction Mkap = iStr "Mkap"
 showInstruction (Update n) = (iStr "Update ") `iAppend` (iNum n)
 showInstruction (Pop n) = (iStr "Pop ") `iAppend` (iNum n)
+showInstruction (Slide n) = (iStr "Slide ") `iAppend` (iNum n)
+showInstruction (Alloc n) = (iStr "Alloc ") `iAppend` (iNum n)
 
 showState :: GmState -> Iseq
 showState s = iConcat [showStack s, iNewline,

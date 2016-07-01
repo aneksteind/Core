@@ -3,7 +3,7 @@ module Compiler where
 import Types
 import GMachine
 import Data.List
-import qualified Data.Map as Map (keys, fromList, map, lookup)
+import qualified Data.Map as Map (keys, fromList, map, lookup, toList)
 
 
 
@@ -61,6 +61,36 @@ compileC (EVar v) env | elem v (Map.keys env) =
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
     compileC e2 env ++ compileC e1 (argOffset 1 env) ++ [Mkap]
+compileC (ELet recursive defs e) args
+    | recursive = compileLetrec compileC defs e args
+    | otherwise = compileLet compileC defs e args
+
+compileLetrec :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
+compileLetrec comp defs expr env =
+    [Alloc n] ++ compileLetrecH defs newEnv (n-1) ++
+    comp expr newEnv ++ [Slide n] where
+        newEnv = compileArgs defs env
+        n = (length defs)
+
+compileLetrecH :: [(Name, CoreExpr)] -> GmEnvironment -> Int -> GmCode
+compileLetrecH [] env n = []
+compileLetrecH ((name, expr):defs) env n = 
+    compileC expr env ++ [Update n] ++ (compileLetrecH defs env (n-1))
+
+compileLet :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
+compileLet comp defs expr env = 
+    compileLetH defs env ++ comp expr newEnv ++ [Slide (length defs)] where
+        newEnv = compileArgs defs env
+
+compileLetH :: [(Name, CoreExpr)] -> GmEnvironment -> GmCode
+compileLetH [] env = []
+compileLetH ((name, expr):defs) env = 
+    compileC expr env ++ compileLetH defs (argOffset 1 env)
+
+compileArgs :: [(Name, CoreExpr)] -> GmEnvironment -> GmEnvironment
+compileArgs defs env = 
+    Map.fromList $ zip (map fst defs) [n-1, n-2 .. 0] ++ (Map.toList $ argOffset n env) where
+        n = length defs
 
 --shifts the number associated with a variable by n in the environment
 argOffset :: Int -> GmEnvironment -> GmEnvironment
