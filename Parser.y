@@ -42,8 +42,8 @@ import Types
 
 
 
-%right ';'
-%nonassoc gt lt gte lte eq neq '.' Pack int var in arrow '}' '{' '(' ')'
+%right ';' in
+%nonassoc gt lt gte lte eq neq '.' Pack int var arrow '}' '{' '(' ')'
 %left '+' '-'
 %left '*' '/' and or
 
