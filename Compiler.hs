@@ -44,7 +44,8 @@ compileSc (name, env, body) = (name, length env, compileR body $ Map.fromList $ 
 -- appends those instructions to the finish, which is to
 -- slide the stack and to unwind
 compileR :: GmCompiler
-compileR e env = compileC e env ++ [Slide (length env + 1), Unwind]
+compileR e env = let n = length env in 
+    compileC e env ++ [Update n, Pop n, Unwind]
 
 -- var: if var is part of the environment then push n
 -- var: otherwise, push global and make it part of the env

@@ -76,18 +76,8 @@ data Instruction = Unwind
                  | Pushint Int
                  | Push Int
                  | Mkap
-                 | Slide Int deriving (Show)
-
-data Node = NNum Int -- Numbers
-          | NAp Addr Addr -- Applications
-          | NGlobal Int GmCode -- Globals
-          deriving (Show)
-
-type Heap a = (Int, Addr, [(Int, a)])
-
-type ASSOC k a = Map k a
-
-type Addr = Int
+                 | Update Int
+                 | Pop Int deriving (Show)
 
 instance Eq Instruction where
   Unwind == Unwind = True
@@ -95,8 +85,27 @@ instance Eq Instruction where
   Pushint a == Pushint b = a == b
   Push a == Push b = a == b
   Mkap == Mkap = True
-  Slide a == Slide b = a == b
+  Update a == Update b = a == b
   _ == _ = False
+
+data Node = NNum Int -- Numbers
+          | NAp Addr Addr -- Applications
+          | NGlobal Int GmCode -- Globals
+          | NInd Addr -- Indirections
+          deriving (Show)
+
+instance Eq Node where
+  NNum a == NNum b = a == b -- needed to check conditions
+  NAp a b == NAp c d = False -- not needed
+  NGlobal a b == NGlobal c d = False -- not needed
+  NInd a == NInd b = False -- not needed
+
+
+type Heap a = (Int, Addr, [(Int, a)])
+
+type ASSOC k a = Map k a
+
+type Addr = Int
 
 --------------------------- COMPILER ---------------------------
 

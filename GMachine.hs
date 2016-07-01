@@ -135,7 +135,8 @@ dispatch (Pushglobal f) = pushglobal f
 dispatch (Pushint n) = pushint n
 dispatch Mkap = mkap
 dispatch (Push n) = push n
-dispatch (Slide n) = slide n
+dispatch (Pop n) = pop n
+dispatch (Update n) = update n
 dispatch Unwind = unwind
 
 -- finds a unique global node in the heap
@@ -174,7 +175,11 @@ push n state =
       a = getArg =<< hLookup (getHeap state) (as !! (n+1)) in
       case a of Just add -> putStack (add:as) state
                 Nothing  -> error "push: address not found in heap"
-  
+
+update :: Int -> GmState -> GmState
+update n state = 
+  let (a:as) = getStack state
+  in putHeap (hUpdate (getHeap state) (as !! n) (NInd a)) (putStack as state)
 
 getArg :: Node -> Maybe Addr
 getArg (NAp a1 a2) = return a2
@@ -182,9 +187,9 @@ getArg (NAp a1 a2) = return a2
 -- takes the address at the top of the stack
 -- drops the next n addresses from the stack
 -- reattaches the address to the stack
-slide :: Int -> GmState -> GmState
-slide n state = putStack (a : drop n as) state where
-  (a:as) = getStack state
+pop :: Int -> GmState -> GmState
+pop n state = putStack (drop n stack) state where
+  stack = getStack state
 
 -- always the last section
 -- if NNum then the g-machine has terminated
@@ -197,7 +202,12 @@ unwind state =
       heap = getHeap state
       newState (NNum n) = state
       newState (NAp a1 a2) = putCode [Unwind] (putStack (a1:a:as) state)
+      newState (NInd ia) = putCode [Unwind] (putStack (ia:as) state)
       newState (NGlobal n c) | length as < n = putCode [] state
                              | otherwise = putCode c state in
       case n of Just node -> newState node        
                 Nothing -> error "unwind: address not found in heap"
+
+
+--unwindAll :: GmState -> GmCode
+--unwindAll state = (getCode state) ++ (getCode $ unwind state)

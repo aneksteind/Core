@@ -1,4 +1,6 @@
-main = 0
+hello f x = f (f x);
+id x = x;
+main = hello hello id 3
 -- f = 3 ;
 -- h x = case (\x . 2) of
     -- <1> -> 2 ;
