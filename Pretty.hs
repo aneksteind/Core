@@ -166,7 +166,8 @@ showInstruction inst = iStr $ show inst
 
 showState :: GmState -> Iseq
 showState s = iConcat [showStack s, iNewline,
-  showInstructions (getCode s), iNewline]
+                       showDump s, iNewline,
+                       showInstructions (getCode s), iNewline]
 
 showStack :: GmState -> Iseq
 showStack s = iConcat [iStr " Stack:[",
@@ -179,6 +180,31 @@ showStackItem s a =
   let maybeAddress = (hLookup (getHeap s) a) in
     case maybeAddress of Just address -> iConcat [iStr (showaddr a), iStr ": ", showNode s a address]
                          Nothing -> error "showStackItem: node not found in heap"
+
+showDump :: GmState -> Iseq
+showDump s = iConcat [iStr " Dump:[",
+  iIndent (iInterleave iNewline
+  (map showDumpItem (reverse (getDump s)))),
+  iStr "]"]
+
+showDumpItem :: GmDumpItem -> Iseq
+showDumpItem (code, stack) = 
+  iConcat [iStr "<",
+  shortShowInstructions 3 code, iStr ", ",
+  shortShowStack stack, iStr ">"]
+
+shortShowInstructions :: Int -> GmCode -> Iseq
+shortShowInstructions number code = 
+  iConcat [iStr "{", iInterleave (iStr "; ") dotcodes, iStr "}"] where
+    codes = map showInstruction (take number code)
+    dotcodes | length code > number = codes ++ [iStr "..."]
+             | otherwise = codes
+
+shortShowStack :: GmStack -> Iseq
+shortShowStack stack = 
+  iConcat [iStr "[", 
+  iInterleave (iStr ", ") (map (iStr . showaddr) stack),
+  iStr "]"]
 
 showNode :: GmState -> Addr -> Node -> Iseq
 showNode s a (NNum n) = iNum n
