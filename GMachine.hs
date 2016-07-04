@@ -11,39 +11,46 @@ import qualified Data.Map as M (lookup, insert)
 --------------------------- GET/SET GMSTATE ---------------------------
 
 getCode :: GmState -> GmCode
-getCode (code, stack, heap, globals, stats) = code
+getCode (code, stack, dump, heap, globals, stats) = code
 
 putCode :: GmCode -> GmState -> GmState
-putCode newCode (oldCode, stack, heap, globals, stats) = (newCode, stack, heap, globals, stats)
+putCode newCode (oldCode, stack, dump, heap, globals, stats) = (newCode, stack, dump, heap, globals, stats)
 
 getStack :: GmState -> GmStack
-getStack (i, stack, heap, globals, stats) = stack
+getStack (i, stack, dump, heap, globals, stats) = stack
 
 putStack :: GmStack -> GmState -> GmState
-putStack newStack (i, oldStack, heap, globals, stats) =
- (i, newStack, heap, globals, stats)
+putStack newStack (i, oldStack, dump, heap, globals, stats) =
+ (i, newStack, dump, heap, globals, stats)
+
+getDump :: GmState -> GmDump
+getDump (i, stack, dump, heap, globals, stats) = dump
+
+putDump :: GmDump -> GmState -> GmState
+putDump newDump (i, stack, dump, heap, globals, stats) =
+ (i, stack, newDump, heap, globals, stats)
 
 getHeap :: GmState -> GmHeap
-getHeap (i, stack, heap, globals, stats) = heap
+getHeap (i, stack, dump, heap, globals, stats) = heap
 
 putHeap :: GmHeap -> GmState -> GmState
-putHeap newHeap (i, stack, oldHeap, globals, stats) =
- (i, stack, newHeap, globals, stats)
+putHeap newHeap (i, stack, dump, oldHeap, globals, stats) =
+ (i, stack, dump, newHeap, globals, stats)
 
 getGlobals :: GmState -> GmGlobals
-getGlobals (i, stack, heap, globals, stats) = globals
+getGlobals (i, stack, dump, heap, globals, stats) = globals
 
 putGlobals :: Name -> Addr -> GmState -> GmState
-putGlobals name addr (code, stack, heap, globals, stats) = 
+putGlobals name addr (code, stack, dump, heap, globals, stats) = 
   let newGlobals = M.insert name addr globals
-  in (code, stack, heap, newGlobals, stats)
+  in (code, stack, dump, heap, newGlobals, stats)
 
 getStats :: GmState -> GmStats
-getStats (i, stack, heap, globals, stats) = stats
+getStats (i, stack, dump, heap, globals, stats) = stats
 
 putStats :: GmStats -> GmState -> GmState
-putStats newStats (i, stack, heap, globals, oldStats) =
- (i, stack, heap, globals, newStats)
+putStats newStats (i, stack, dump, heap, globals, oldStats) =
+ (i, stack, dump, heap, globals, newStats)
 
 statInitial :: GmStats
 statInitial = 0
@@ -234,6 +241,12 @@ allocNodes n heap = (heap2, a:as) where
   (heap2, a) = hAlloc heap1 (NInd hNull)
 
 
+
+--add :: GmState -> GmState
+--add state = 
+--  putHeap newHeap (putStack (newAddress:addresses) state) where
+--  (newHeap, newAddress) = hAlloc (getHeap state) (NNum (a1 + a2))
+--  (a1:a2:addresses) = getStack state
 
 
 --unwindAll :: GmState -> GmCode

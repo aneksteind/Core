@@ -57,6 +57,7 @@ data Iseq = INil
 
 type GmState = (GmCode,     -- current instruction stream
                 GmStack,    -- current stack
+                GmDump,     -- a stack for WHNF reductions
                 GmHeap,     -- heap of nodes
                 GmGlobals,  -- global addresses in heap
                 GmStats)    -- statistics
@@ -64,6 +65,9 @@ type GmState = (GmCode,     -- current instruction stream
 type GmCode = [Instruction]
 
 type GmStack = [Addr]
+
+type GmDump = [GmDumpItem]
+type GmDumpItem = (GmCode, GmStack)
 
 type GmHeap = Heap Node
 
