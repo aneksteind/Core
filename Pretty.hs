@@ -153,15 +153,16 @@ showInstructions is = iConcat [iStr " Code:{",
   iStr "}", iNewline]
 
 showInstruction :: Instruction -> Iseq
-showInstruction Unwind = iStr "Unwind"
 showInstruction (Pushglobal f) = (iStr "Pushglobal ") `iAppend` (iStr f)
 showInstruction (Push n) = (iStr "Push ") `iAppend` (iNum n)
 showInstruction (Pushint n) = (iStr "Pushint ") `iAppend` (iNum n)
-showInstruction Mkap = iStr "Mkap"
 showInstruction (Update n) = (iStr "Update ") `iAppend` (iNum n)
 showInstruction (Pop n) = (iStr "Pop ") `iAppend` (iNum n)
 showInstruction (Slide n) = (iStr "Slide ") `iAppend` (iNum n)
 showInstruction (Alloc n) = (iStr "Alloc ") `iAppend` (iNum n)
+showInstruction (Cond cond1 cond2) = 
+  (iStr "Cond {") `iAppend` showInstructions cond1 `iAppend`  showInstructions cond2
+showInstruction inst = iStr $ show inst
 
 showState :: GmState -> Iseq
 showState s = iConcat [showStack s, iNewline,

@@ -83,7 +83,11 @@ data Instruction = Unwind
                  | Update Int
                  | Pop Int 
                  | Slide Int
-                 | Alloc Int deriving (Show)
+                 | Alloc Int
+                 | Eval
+                 | Add | Sub | Mul | Div | Neg
+                 | Eq | Ne | Lt | Le | Gt | Ge 
+                 | Cond GmCode GmCode deriving (Show)
 
 instance Eq Instruction where
   Unwind == Unwind = True
