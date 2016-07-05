@@ -5,14 +5,15 @@
 
 -- Y f = let x = 2;
 --          y = 0 in f x;
-Y f = letrec x = 2 in f x;
-main = Y I
+-- Y f = letrec x = 2 in f x;
 
+h x = case x of
+       <1> -> 2 ;
+       <2> -> 2 ;
+main = 0
 
 -- f = 3 ;
--- h x = case (\x . 2) of
-    -- <1> -> 2 ;
-    -- <2> -> 5 ;;
+
 -- g x y = let z = x in z;
 -- f x y = case x of
 --     <1> -> case (let x = y in y + 2) of
