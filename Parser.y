@@ -73,7 +73,7 @@ expr : expr aexpr                           { EAp $1 $2 }
      | let defns in expr                    { ELet nonRecursive $2 $4 }
      | letrec defns in expr                 { ELet recursive $2 $4 }
      | case expr of alts                    { ECase $2 $4 }
-     | lambda var vars '.' expr               { ELam ($2 : $3) $5 }
+     | lambda var vars '.' expr             { ELam ($2 : $3) $5 }
      | aexpr                                { $1 }
 
 aexpr : var                                 { EVar $1 }

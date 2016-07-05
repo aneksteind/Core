@@ -153,7 +153,13 @@ dispatch Sub = sub
 dispatch Mul = mul
 dispatch Div = divide
 dispatch Neg = neg
-
+dispatch Eq = eq
+dispatch Ne = ne
+dispatch Lt = lt
+dispatch Le = le
+dispatch Gt = gt
+dispatch Ge = ge
+dispatch (Cond c1 c2) = cond c1 c2
 
 -- finds a unique global node in the heap
 -- puts the address of the global node at the top of the stack
@@ -266,6 +272,16 @@ boxInteger n state =
   putStack (a: getStack state) $ putHeap newHeap state where
     (newHeap, a) = hAlloc (getHeap state) (NNum n)
 
+boxBoolean :: Bool -> GmState -> GmState
+boxBoolean b state =
+  putStack (a: getStack state) $ putHeap newHeap state where
+    (newHeap, a) = hAlloc (getHeap state) (NNum bool)
+    bool | b = 1
+         | otherwise = 0
+
+comparison :: (Int -> Int -> Bool) -> StateTran
+comparison = primitive2 boxBoolean unboxInteger
+
 unboxInteger :: Addr -> GmState -> Int
 unboxInteger a state =
   let maybeNode = (hLookup (getHeap state) a)
@@ -291,6 +307,18 @@ arithmetic1 = primitive1 boxInteger unboxInteger
 arithmetic2 :: DOperator Int Int -> StateTran
 arithmetic2 = primitive2 boxInteger unboxInteger
 
+cond :: GmCode -> GmCode -> GmState -> GmState
+cond i1 i2 state =
+  let (a:as) = getStack state
+      heap = getHeap state
+      i = getCode state
+      maybeNode = hLookup heap a in
+  case maybeNode of Just (NNum 1) -> putCode (i1++i) $ putStack as state
+                    Just (NNum 0) -> putCode (i2++i) $ putStack as state
+                    Just _        -> error "cond: address on top does not point to NNum"
+                    _             -> error "cond: address not found in heap"
+
+
 add :: GmState -> GmState
 add state = arithmetic2 (+) state
 
@@ -305,4 +333,22 @@ mul state = arithmetic2 (*) state
 
 neg :: GmState -> GmState
 neg state = arithmetic1 (* (-1)) state
+
+eq :: GmState -> GmState
+eq state = comparison (==) state
+
+ne :: GmState -> GmState
+ne state = comparison (/=) state
+
+le :: GmState -> GmState
+le state = comparison (<=) state
+
+lt :: GmState -> GmState
+lt state = comparison (<) state
+
+gt :: GmState -> GmState
+gt state = comparison (>) state
+
+ge :: GmState -> GmState
+ge state = comparison (>=) state
 

@@ -18,3 +18,5 @@ main = do
 run = putStrLn . showResults 
     . eval . compile 
     . parseTokens . scanTokens
+
+--run = print . parseTokens . scanTokens
