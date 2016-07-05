@@ -22,7 +22,12 @@ buildInitialHeap program = (heap, Map.fromList globals) where
     compiled = map compileSc (preludeDefs ++ program) ++ compiledPrimitives :: [GmCompiledSC]
 
 compiledPrimitives :: [GmCompiledSC]
-compiledPrimitives = []
+compiledPrimitives = 
+    [("+", 2, [Push 1, Eval, Push 1, Eval, Add, Update 2, Pop 2, Unwind]),
+    ("-", 2, [Push 1, Eval, Push 1, Eval, Sub, Update 2, Pop 2, Unwind]),
+    ("*", 2, [Push 1, Eval, Push 1, Eval, Mul, Update 2, Pop 2, Unwind]),
+    ("/", 2, [Push 1, Eval, Push 1, Eval, Div, Update 2, Pop 2, Unwind]),
+    ("negate", 1, [Push 0, Eval, Neg, Update 1, Pop 1, Unwind])]
 
 -- creates a tuple of a heap, and a name/address pair
 allocateSc :: GmHeap -> GmCompiledSC -> (GmHeap, (Name, Addr))

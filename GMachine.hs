@@ -148,6 +148,12 @@ dispatch Unwind = unwind
 dispatch (Slide n) = slide n
 dispatch (Alloc n) = alloc n
 dispatch Eval = evalI
+dispatch Add = add
+dispatch Sub = sub
+dispatch Mul = mul
+dispatch Div = divide
+dispatch Neg = neg
+
 
 -- finds a unique global node in the heap
 -- puts the address of the global node at the top of the stack
@@ -255,13 +261,48 @@ allocNodes n heap = (heap2, a:as) where
   (heap2, a) = hAlloc heap1 (NInd hNull)
 
 
+boxInteger :: Int -> GmState -> GmState
+boxInteger n state = 
+  putStack (a: getStack state) $ putHeap newHeap state where
+    (newHeap, a) = hAlloc (getHeap state) (NNum n)
 
---add :: GmState -> GmState
---add state = 
---  putHeap newHeap (putStack (newAddress:addresses) state) where
---  (newHeap, newAddress) = hAlloc (getHeap state) (NNum (a1 + a2))
---  (a1:a2:addresses) = getStack state
+unboxInteger :: Addr -> GmState -> Int
+unboxInteger a state =
+  let maybeNode = (hLookup (getHeap state) a)
+      unboxErr =  "unbox: unboxing a non-integer"
+      heapErr = "unbox: node at address " ++ (show a) ++ " not found in heap"
+  in case maybeNode of Just (NNum i) -> i
+                       Just _        -> error heapErr
+                       _             -> error unboxErr
 
+primitive1 ::  Boxer b -> Unboxer a -> MOperator a b -> StateTran
+primitive1 box unbox op state = 
+  box (op $ unbox a state) (putStack as state) where
+    (a:as) = getStack state
 
---unwindAll :: GmState -> GmCode
---unwindAll state = (getCode state) ++ (getCode $ unwind state)
+primitive2 :: Boxer b -> Unboxer a -> DOperator a b -> StateTran
+primitive2 box unbox op state = 
+  box (op (unbox a0 state) (unbox a1 state)) (putStack as state) where
+    (a0:a1:as) = getStack state
+
+arithmetic1 :: MOperator Int Int -> StateTran
+arithmetic1 = primitive1 boxInteger unboxInteger
+
+arithmetic2 :: DOperator Int Int -> StateTran
+arithmetic2 = primitive2 boxInteger unboxInteger
+
+add :: GmState -> GmState
+add state = arithmetic2 (+) state
+
+sub :: GmState -> GmState
+sub state = arithmetic2 (-) state
+
+divide :: GmState -> GmState
+divide state = arithmetic2 (div) state
+
+mul :: GmState -> GmState
+mul state = arithmetic2 (*) state
+
+neg :: GmState -> GmState
+neg state = arithmetic1 (* (-1)) state
+

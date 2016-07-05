@@ -138,6 +138,14 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
   ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")) ]
 
 
+--------------------------- ARITHMETIC ---------------------------
+type Boxer b = (b -> GmState -> GmState)
+type Unboxer a = (Addr -> GmState -> a)
+type MOperator a b = (a -> b)
+type DOperator a b = (a -> a -> b)
+type StateTran = (GmState -> GmState)
+
+
 
 
 
