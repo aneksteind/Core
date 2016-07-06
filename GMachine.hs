@@ -230,15 +230,22 @@ unwind state =
       newState (NNum num) = updateFromDump a dump state
       newState (NAp a1 a2) = putCode [Unwind] (putStack (a1:a:as) state)
       newState (NInd ia) = putCode [Unwind] (putStack (ia:as) state)
-      newState (NGlobal na c) | length as < na = putCode (fst $ head dump) $ putStack (stack !! (length as):(snd $ head dump)) state
-                             | otherwise = replaceAddrs na $ putCode c state in
+      newState (NGlobal na c) | length as < na = 
+        case dump of ((i,s):d) -> putCode i $
+                                  putStack ((last stack):s) $
+                                  putDump d state
+                     []        -> error "unwind: dump should not be empty"
+                              | otherwise =
+        replaceAddrs na $ putCode c state in
       case n of Just node -> newState node        
                 Nothing -> error "unwind: address not found in heap"
 
 updateFromDump :: Addr -> GmDump -> GmState -> GmState
 updateFromDump address dump state = 
   case dump of [] -> state
-               ((i,s):d) -> putDump d $ putCode i $ putStack (address:s) state
+               ((i,s):d) -> putDump d $ 
+                            putCode i $
+                            putStack (address:s) state
 
 -- replaces the application node addresses in the stack with
 -- the addresses of the value being applied to
