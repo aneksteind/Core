@@ -1,2 +1,4 @@
 inc x = x+1;
-main = twice twice (twice inc) 0
+main = twice (twice (twice inc)) 0
+
+-- works mark 5

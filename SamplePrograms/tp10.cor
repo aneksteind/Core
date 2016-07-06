@@ -3,5 +3,7 @@ nfib n = if (n<=0) 0 (1 + (nfib (n-1)) + (nfib (n-2))) ;
 nfib2 n = fib n 1 1;
 fib n acc1 acc2 = if (n<=2) (acc2) (fib (n-1) (acc2) (acc1 + acc2));
 
-main = nfib2 40
+main = nfib2 4
+
+-- works mark 5
 

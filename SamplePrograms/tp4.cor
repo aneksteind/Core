@@ -6,3 +6,5 @@ abort = abort ;
 infinite x = letrec xs = cons x xs
 	     in xs ;
 main = hd (tl (tl (infinite 4)))
+
+-- broken mark 5
