@@ -230,7 +230,7 @@ unwind state =
       newState (NNum num) = updateFromDump a dump state
       newState (NAp a1 a2) = putCode [Unwind] (putStack (a1:a:as) state)
       newState (NInd ia) = putCode [Unwind] (putStack (ia:as) state)
-      newState (NGlobal na c) | length as < na = putCode [] state
+      newState (NGlobal na c) | length as < na = putCode (fst $ head dump) $ putStack (stack !! (length as):(snd $ head dump)) state
                              | otherwise = replaceAddrs na $ putCode c state in
       case n of Just node -> newState node        
                 Nothing -> error "unwind: address not found in heap"

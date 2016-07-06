@@ -29,7 +29,7 @@ compiledPrimitives =
     ("/", 2, [Push 1, Eval, Push 1, Eval, Div, Update 2, Pop 2, Unwind]),
     ("negate", 1, [Push 0, Eval, Neg, Update 1, Pop 1, Unwind]),
     ("==", 2, [Push 1, Eval, Push 1, Eval, Eq, Update 2, Pop 2, Unwind]),
-    ("˜=", 2, [Push 1, Eval, Push 1, Eval, Ne, Update 2, Pop 2, Unwind]),
+    ("/=", 2, [Push 1, Eval, Push 1, Eval, Ne, Update 2, Pop 2, Unwind]),
     ("<", 2, [Push 1, Eval, Push 1, Eval, Lt, Update 2, Pop 2, Unwind]),
     ("<=", 2, [Push 1, Eval, Push 1, Eval, Le, Update 2, Pop 2, Unwind]),
     (">", 2, [Push 1, Eval, Push 1, Eval, Gt, Update 2, Pop 2, Unwind]),
@@ -57,7 +57,7 @@ compileSc (name, env, body) = (name, length env, compileR body $ Map.fromList $ 
 -- slide the stack and to unwind
 compileR :: GmCompiler
 compileR e env = let n = length env in 
-    compileC e env ++ [Update n, Pop n, Unwind]
+    compileE e env ++ [Update n, Pop n, Unwind]
 
 -- var: if var is part of the environment then push n
 -- var: otherwise, push global and make it part of the env
@@ -68,7 +68,7 @@ compileR e env = let n = length env in
 compileC :: GmCompiler
 compileC (EVar v) env | elem v (Map.keys env) =
     let n = Map.lookup v env in case n of Just num -> [Push num]
-                                          Nothing -> error "variable not in environment"
+                                          Nothing -> error "compileC: variable not in environment"
                       | otherwise = [Pushglobal v]
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
@@ -76,6 +76,36 @@ compileC (EAp e1 e2) env =
 compileC (ELet recursive defs e) args
     | recursive = compileLetrec compileC defs e args
     | otherwise = compileLet compileC defs e args
+
+compileE :: GmCompiler
+compileE (ENum nm) env = [Pushint nm]
+compileE (ELet recursive defs e) args
+    | recursive = compileLetrec compileE defs e args
+    | otherwise = compileLet compileE defs e args
+compileE (EAp (EAp (EVar "+") e1) e2) env = compileEB "+" e1 e2 env
+compileE (EAp (EAp (EVar "-") e1) e2) env = compileEB "-" e1 e2 env
+compileE (EAp (EAp (EVar "*") e1) e2) env = compileEB "*" e1 e2 env
+compileE (EAp (EAp (EVar "/") e1) e2) env = compileEB "/" e1 e2 env
+compileE (EAp (EAp (EVar "<") e1) e2) env = compileEB "<" e1 e2 env
+compileE (EAp (EAp (EVar "<=") e1) e2) env = compileEB "<=" e1 e2 env
+compileE (EAp (EAp (EVar "==") e1) e2) env = compileEB "==" e1 e2 env
+compileE (EAp (EAp (EVar "/=") e1) e2) env = compileEB "/=" e1 e2 env
+compileE (EAp (EAp (EVar ">=") e1) e2) env = compileEB ">=" e1 e2 env
+compileE (EAp (EAp (EVar ">") e1) e2) env = compileEB ">" e1 e2 env
+compileE (EAp (EVar "negate") e1) env = compileE e1 env ++ [Neg]
+compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env = 
+    compileE predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
+compileE e env = compileC e env ++ [Eval]
+
+compileEB :: String -> CoreExpr -> CoreExpr -> GmEnvironment -> GmCode
+compileEB op e0 e1 env =
+    let maybeBinop = Map.lookup op builtInDyadic
+        compileBinop bo = compileE e1 env ++ compileE e0 (argOffset 1 env) ++ [bo]
+        errorMsg = "compileEB: operation " ++ op ++ " not defined" in
+    case maybeBinop of Just binop -> compileBinop binop
+                       Nothing -> error errorMsg
+                        
+                        
 
 compileLetrec :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
 compileLetrec comp defs expr env =

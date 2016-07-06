@@ -137,6 +137,11 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
   (EAp (EVar "g") (EVar "x"))),
   ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")) ]
 
+builtInDyadic :: ASSOC Name Instruction
+builtInDyadic = 
+  fromList [("+", Add), ("-", Sub), ("*", Mul), ("/", Div),
+            ("==", Eq), ("/=", Ne), (">=", Ge),
+            (">", Gt), ("<=", Le), ("<", Lt)]
 
 --------------------------- ARITHMETIC ---------------------------
 type Boxer b = (b -> GmState -> GmState)
