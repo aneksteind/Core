@@ -43,7 +43,7 @@ allocateSc heap (name, nargs, instructions) = (newHeap, (name, addr)) where
 
 -- start with the main function and unwind from there
 initialCode :: GmCode
-initialCode = [Pushglobal "main", Unwind]
+initialCode = [Pushglobal "main", Unwind, Print]
 
 -- each super combinator compiled with this function
 -- zips variable names with numbers 0..
@@ -73,6 +73,9 @@ compileC (EVar v) env | elem v (Map.keys env) =
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
     compileC e2 env ++ compileC e1 (argOffset 1 env) ++ [Mkap]
+compileC (EConstr t n es) env = compileECH n es env ++ [Pack t n]
+compileC (ECase e alts) env = compileE e env ++
+    [Casejump $ compileAlts compileESS alts env]
 compileC (ELet recursive defs e) args
     | recursive = compileLetrec compileC defs e args
     | otherwise = compileLet compileC defs e args
@@ -82,6 +85,8 @@ compileE (ENum nm) env = [Pushint nm]
 compileE (ELet recursive defs e) args
     | recursive = compileLetrec compileE defs e args
     | otherwise = compileLet compileE defs e args
+compileE (ECase e alts) env = compileE e env ++
+    [Casejump $ compileAlts compileESS alts env]
 compileE (EAp (EAp (EVar "+") e1) e2) env = compileEB "+" e1 e2 env
 compileE (EAp (EAp (EVar "-") e1) e2) env = compileEB "-" e1 e2 env
 compileE (EAp (EAp (EVar "*") e1) e2) env = compileEB "*" e1 e2 env
@@ -95,7 +100,16 @@ compileE (EAp (EAp (EVar ">") e1) e2) env = compileEB ">" e1 e2 env
 compileE (EAp (EVar "negate") e1) env = compileE e1 env ++ [Neg]
 compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env = 
     compileE predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
+compileE (EConstr t n es) env = compileECH n es env ++ [Pack t n]
 compileE e env = compileC e env ++ [Eval]
+
+compileECH :: Int -> [CoreExpr] -> GmEnvironment -> GmCode
+compileECH numArgs (e:es) env = 
+    let compiled = foldl iterCode base es
+        iterCode = (\(code, n) x -> ((compileC x (argOffset n env))++code, n+1))
+        base = ((compileC e env),1) 
+    in fst compiled
+compileECH numArgs [] env = []
 
 compileEB :: String -> CoreExpr -> CoreExpr -> GmEnvironment -> GmCode
 compileEB op e0 e1 env =
@@ -104,8 +118,18 @@ compileEB op e0 e1 env =
         errorMsg = "compileEB: operation " ++ op ++ " not defined" in
     case maybeBinop of Just binop -> compileBinop binop
                        Nothing -> error errorMsg
-                        
-                        
+       
+-- (Int -> GmCompiler): compiler for alternative bodies
+-- [CoreAlt]: the list of alternatives
+-- GmEnvironment: the current environment
+-- [(Int, GmCode)]: list of alternative code sequences                 
+compileAlts :: (Int -> GmCompiler) -> [CoreAlt] -> GmEnvironment -> [(Int, GmCode)] 
+compileAlts comp alts env = 
+    [(tag, comp (length names) body (Map.fromList (zip names [0..] ++ (Map.toList $ argOffset (length names) env))))
+        | (tag, names, body) <- alts]
+
+compileESS :: Int -> GmCompiler
+compileESS offset expr env = [Split offset] ++ compileE expr env ++ [Slide offset]
 
 compileLetrec :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
 compileLetrec comp defs expr env =
