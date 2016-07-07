@@ -1,0 +1,5 @@
+if3 c t f = case c of
+    <1> -> f;
+    <2> -> t;;
+
+main = if3 true 5 4
