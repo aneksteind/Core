@@ -10,47 +10,53 @@ import qualified Data.Map as M (lookup, insert)
 
 --------------------------- GET/SET GMSTATE ---------------------------
 
+getOutput :: GmState -> GmOutput
+getOutput (o,i ,stack, dump, heap, globals, stats) = o
+
+putOutput :: GmOutput -> GmState -> GmState
+putOutput newO (output, code, stack, dump, heap, globals, stats) = (newO, code, stack, dump, heap, globals, stats)
+
 getCode :: GmState -> GmCode
-getCode (code, stack, dump, heap, globals, stats) = code
+getCode (output, code, stack, dump, heap, globals, stats) = code
 
 putCode :: GmCode -> GmState -> GmState
-putCode newCode (oldCode, stack, dump, heap, globals, stats) = (newCode, stack, dump, heap, globals, stats)
+putCode newCode (output, oldCode, stack, dump, heap, globals, stats) = (output, newCode, stack, dump, heap, globals, stats)
 
 getStack :: GmState -> GmStack
-getStack (i, stack, dump, heap, globals, stats) = stack
+getStack (output, i, stack, dump, heap, globals, stats) = stack
 
 putStack :: GmStack -> GmState -> GmState
-putStack newStack (i, oldStack, dump, heap, globals, stats) =
- (i, newStack, dump, heap, globals, stats)
+putStack newStack (output, i, oldStack, dump, heap, globals, stats) =
+ (output, i, newStack, dump, heap, globals, stats)
 
 getDump :: GmState -> GmDump
-getDump (i, stack, dump, heap, globals, stats) = dump
+getDump (output, i, stack, dump, heap, globals, stats) = dump
 
 putDump :: GmDump -> GmState -> GmState
-putDump newDump (i, stack, dump, heap, globals, stats) =
- (i, stack, newDump, heap, globals, stats)
+putDump newDump (output, i, stack, dump, heap, globals, stats) =
+ (output, i, stack, newDump, heap, globals, stats)
 
 getHeap :: GmState -> GmHeap
-getHeap (i, stack, dump, heap, globals, stats) = heap
+getHeap (output, i, stack, dump, heap, globals, stats) = heap
 
 putHeap :: GmHeap -> GmState -> GmState
-putHeap newHeap (i, stack, dump, oldHeap, globals, stats) =
- (i, stack, dump, newHeap, globals, stats)
+putHeap newHeap (output, i, stack, dump, oldHeap, globals, stats) =
+ (output, i, stack, dump, newHeap, globals, stats)
 
 getGlobals :: GmState -> GmGlobals
-getGlobals (i, stack, dump, heap, globals, stats) = globals
+getGlobals (output, i, stack, dump, heap, globals, stats) = globals
 
 putGlobals :: Name -> Addr -> GmState -> GmState
-putGlobals name addr (code, stack, dump, heap, globals, stats) = 
+putGlobals name addr (output, code, stack, dump, heap, globals, stats) = 
   let newGlobals = M.insert name addr globals
-  in (code, stack, dump, heap, newGlobals, stats)
+  in (output, code, stack, dump, heap, newGlobals, stats)
 
 getStats :: GmState -> GmStats
-getStats (i, stack, dump, heap, globals, stats) = stats
+getStats (output, i, stack, dump, heap, globals, stats) = stats
 
 putStats :: GmStats -> GmState -> GmState
-putStats newStats (i, stack, dump, heap, globals, oldStats) =
- (i, stack, dump, heap, globals, newStats)
+putStats newStats (output, i, stack, dump, heap, globals, oldStats) =
+ (output, i, stack, dump, heap, globals, newStats)
 
 statInitial :: GmStats
 statInitial = 0
@@ -160,6 +166,10 @@ dispatch Le = le
 dispatch Gt = gt
 dispatch Ge = ge
 dispatch (Cond c1 c2) = cond c1 c2
+dispatch (Pack t n) = pack t n
+dispatch (Casejump cases) = casejump cases
+dispatch (Split n) = split n
+dispatch Print = printt
 
 -- finds a unique global node in the heap
 -- puts the address of the global node at the top of the stack
@@ -358,4 +368,44 @@ gt state = comparison (>) state
 
 ge :: GmState -> GmState
 ge state = comparison (>=) state
+
+pack :: Int -> Int -> GmState -> GmState
+pack t n state = 
+  let stack = getStack state
+      heap = getHeap state
+      (newHeap, a) = hAlloc heap (NConstr t (take n stack)) in 
+  putStack (a:(drop n stack)) $ putHeap newHeap state
+
+casejump :: [(Int, GmCode)] -> GmState -> GmState
+casejump cases state =
+  let (a:s) = getStack state
+      i = getCode state
+      heap = getHeap state
+      maybeNode = hLookup heap a
+      maybeCode typ = lookup typ cases
+      message t = "code for <" ++ show t ++ "> not found in cases"
+      typeCode t = case (maybeCode t) of Just code -> code
+                                         _         -> error (message t) in 
+  case maybeNode of Just (NConstr t ss) -> putCode ((typeCode t)++i) state
+                    _ -> error "casejump: node not found in heap"
+
+split :: Int -> GmState -> GmState
+split n state = 
+  let (a:as) = getStack state
+      heap = getHeap state
+      maybeNC = hLookup heap a in 
+  case maybeNC of Just (NConstr t s) -> putStack (s++as) state
+                  _ -> error "split: node not found in heap"
+
+printt :: GmState -> GmState
+printt state = 
+  let (a:as) = getStack state
+      heap = getHeap state
+      output = getOutput state
+      i = getCode state
+      appP xs = take (2 * (length xs)) $ cycle [Eval, Print]
+      maybeNode = hLookup heap a in 
+  case maybeNode of Just (NNum n) -> putStack as $ putOutput (output ++ (show n)) state
+                    Just (NConstr t s) -> putCode ((appP s)++i) $ putStack (s++as) state
+                    _ -> error $ "address " ++ show a ++ " not found in heap"
 

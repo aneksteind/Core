@@ -11,7 +11,7 @@ import qualified Data.Map as Map (keys, fromList, map, lookup, toList)
 -- finds the main super combinator and evaluates it
 -- heap initialized containing nodes for each global sc
 compile :: CoreProgram -> GmState
-compile program = (initialCode, [], [], heap, globals, statInitial) where
+compile program = ("", initialCode, [], [], heap, globals, statInitial) where
     (heap,globals) = buildInitialHeap program
 
 -- allocates nodes for each global sc

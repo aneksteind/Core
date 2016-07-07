@@ -55,12 +55,15 @@ data Iseq = INil
 
 --------------------------- GMACHINE ---------------------------
 
-type GmState = (GmCode,     -- current instruction stream
+type GmState = (GmOutput,   -- current output
+                GmCode,     -- current instruction stream
                 GmStack,    -- current stack
                 GmDump,     -- a stack for WHNF reductions
                 GmHeap,     -- heap of nodes
                 GmGlobals,  -- global addresses in heap
                 GmStats)    -- statistics
+
+type GmOutput = [Char]
 
 type GmCode = [Instruction]
 
@@ -87,7 +90,11 @@ data Instruction = Unwind
                  | Eval
                  | Add | Sub | Mul | Div | Neg
                  | Eq | Ne | Lt | Le | Gt | Ge 
-                 | Cond GmCode GmCode deriving (Show)
+                 | Cond GmCode GmCode
+                 | Pack Int Int
+                 | Casejump [(Int, GmCode)]
+                 | Split Int
+                 | Print deriving (Show)
 
 instance Eq Instruction where
   Unwind == Unwind = True
@@ -102,6 +109,7 @@ data Node = NNum Int -- Numbers
           | NAp Addr Addr -- Applications
           | NGlobal Int GmCode -- Globals
           | NInd Addr -- Indirections
+          | NConstr Int [Addr]
           deriving (Show)
 
 instance Eq Node where
@@ -109,6 +117,7 @@ instance Eq Node where
   NAp a b == NAp c d = False -- not needed
   NGlobal a b == NGlobal c d = False -- not needed
   NInd a == NInd b = False -- not needed
+  NConstr a b == NConstr c d = False -- not needed
 
 
 type Heap a = (Int, Addr, [(Int, a)])

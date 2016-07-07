@@ -162,12 +162,29 @@ showInstruction (Slide n) = (iStr "Slide ") `iAppend` (iNum n)
 showInstruction (Alloc n) = (iStr "Alloc ") `iAppend` (iNum n)
 showInstruction (Cond cond1 cond2) = 
   (iStr "Cond {") `iAppend` showInstructions cond1 `iAppend`  showInstructions cond2
+showInstruction (Pack n1 n2) =
+ (iStr "Pack{") `iAppend` (iNum n1) `iAppend` (iStr ",") `iAppend`
+  (iNum n2) `iAppend` (iStr "}")
+showInstruction (Casejump cases) = (iStr "Casejump [") `iAppend` showCases cases
+showInstruction (Split n) = (iStr "Split ") `iAppend` (iNum n)
 showInstruction inst = iStr $ show inst
 
+showCases :: [(Int, GmCode)] -> Iseq
+showCases cases = iInterleave iNewline $ map showCase cases
+
+showCase :: (Int, GmCode) -> Iseq
+showCase (i, code) = 
+  (iNum i) `iAppend` (iStr " -> [") `iAppend`
+   showInstructions code `iAppend` (iStr "]")
+
 showState :: GmState -> Iseq
-showState s = iConcat [showStack s, iNewline,
+showState s = iConcat [showOutput s, iNewline,
+                       showStack s, iNewline,
                        showDump s, iNewline,
                        showInstructions (getCode s), iNewline]
+
+showOutput :: GmState -> Iseq
+showOutput s = iConcat [iStr "Output:\"", iStr (getOutput s), iStr "\""]
 
 showStack :: GmState -> Iseq
 showStack s = iConcat [iStr " Stack:[",
@@ -213,6 +230,10 @@ showNode s a (NGlobal n g) = iConcat [iStr "Global ", iStr v]
 showNode s a (NAp a1 a2) = iConcat [iStr "Ap ", iStr (showaddr a1),
   iStr " ", iStr (showaddr a2)]
 showNode s a (NInd ia) = iConcat [iStr "Ind ", iStr (showaddr ia)]
+showNode s a (NConstr t as) = 
+  iConcat [iStr "Cons ", iNum t, iStr " [", 
+           iInterleave (iStr ", ") (map (iStr.showaddr) as),
+           iStr "]"]
 
 showStats :: GmState -> Iseq
 showStats s = iConcat [ iStr "Steps taken = ", iNum (statGetSteps (getStats s))]
