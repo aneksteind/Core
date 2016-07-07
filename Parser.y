@@ -78,8 +78,14 @@ expr : expr aexpr                           { EAp $1 $2 }
 
 aexpr : var                                 { EVar $1 }
       | int                                 { ENum $1 }
-      | Pack '{' int ',' int '}'            { EConstr $3 $5 }
+      | Pack '{' int ',' int '}' '('exprs')'    { EConstr $3 $5 $8}
       | '('expr')'                          { $2 }
+
+exprs :                                     { [] }
+      | exprsH                              { $1 }
+
+exprsH : expr                               { [$1] }
+       | expr ',' exprsH                    { $1 : $3 }
 
 defns : defn                                { [$1] }
       | defn ';' defns                      { $1 : $3 }

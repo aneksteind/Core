@@ -39,8 +39,10 @@ pprExpr (ECase e1 patterns) =
 pprExpr (ELam vars expr) = 
     iConcat [ iStr "(lambda (", iInterleave (iStr " ") (map iStr vars),
               iStr ") ", pprExpr expr, iStr ")"]
-pprExpr (EConstr i1 i2) = iConcat [ iStr "Pack {", iStr $ show i1,
-                                    iStr ", ", iStr $ show i2, iStr "}"]
+pprExpr (EConstr i1 i2 es) = 
+  iConcat [ iStr "Pack {", iStr $ show i1,
+            iStr ", ", iStr $ show i2, iStr "}"] `iAppend`
+            (iConcat $ map pprExpr es)
 
 
 pprPatterns :: [CoreAlt] -> Iseq

@@ -238,6 +238,7 @@ unwind state =
       replaceAddrs name = putStack (rearrange name heap stack)
       n = (hLookup heap a)
       newState (NNum num) = updateFromDump a dump state
+      newState (NConstr t s) = updateFromDump a dump state
       newState (NAp a1 a2) = putCode [Unwind] (putStack (a1:a:as) state)
       newState (NInd ia) = putCode [Unwind] (putStack (ia:as) state)
       newState (NGlobal na c) | length as < na = 
@@ -292,9 +293,9 @@ boxInteger n state =
 boxBoolean :: Bool -> GmState -> GmState
 boxBoolean b state =
   putStack (a: getStack state) $ putHeap newHeap state where
-    (newHeap, a) = hAlloc (getHeap state) (NNum bool)
-    bool | b = 1
-         | otherwise = 0
+    (newHeap, a) = hAlloc (getHeap state) (NConstr bool [])
+    bool | b = 2
+         | otherwise = 1
 
 comparison :: (Int -> Int -> Bool) -> StateTran
 comparison = primitive2 boxBoolean unboxInteger
@@ -330,8 +331,8 @@ cond i1 i2 state =
       heap = getHeap state
       i = getCode state
       maybeNode = hLookup heap a in
-  case maybeNode of Just (NNum 1) -> putCode (i1++i) $ putStack as state
-                    Just (NNum 0) -> putCode (i2++i) $ putStack as state
+  case maybeNode of Just (NConstr 2 _) -> putCode (i1++i) $ putStack as state
+                    Just (NConstr 1 _) -> putCode (i2++i) $ putStack as state
                     Just _        -> error "cond: address on top does not point to NNum"
                     _             -> error "cond: address not found in heap"
 

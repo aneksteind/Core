@@ -12,6 +12,8 @@ main :: IO ()
 main = do
     (file:_) <- getArgs
     contents <- readFile file
+    let parsed = parseTokens . scanTokens
+    --print $ parsed contents
     run contents
 
 run = putStrLn . showResults 

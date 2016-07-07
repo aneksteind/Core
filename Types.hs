@@ -5,7 +5,7 @@ import Data.Map
 
 data Expr a = EVar Name
             | ENum Int
-            | EConstr Int Int
+            | EConstr Int Int [Expr a]
             | EAp (Expr a) (Expr a)
             | ELet IsRec [(a, Expr a)] (Expr a)
             | ECase (Expr a) [Alter a]
@@ -144,7 +144,9 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
   (EAp (EVar "g") (EVar "x"))),
   ("compose", ["f","g","x"], EAp (EVar "f")
   (EAp (EVar "g") (EVar "x"))),
-  ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")) ]
+  ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")),
+  ("true", [], EConstr 2 0 []),
+  ("false", [], EConstr 1 0 [])]
 
 builtInDyadic :: ASSOC Name Instruction
 builtInDyadic = 
