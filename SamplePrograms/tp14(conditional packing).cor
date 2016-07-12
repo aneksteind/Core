@@ -2,4 +2,6 @@ if3 c t f = case c of
     <1> -> f;
     <2> -> t;;
 
-main = if3 true 5 4
+blub = Pack{1,0}();
+
+main = if3 blub 5 4

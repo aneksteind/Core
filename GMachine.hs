@@ -3,6 +3,7 @@ module GMachine where
 import Types
 import Parser
 import qualified Data.Map as M (lookup, insert)
+import Data.Char
 
 --runProg :: [Char] -> [Char]
 --runProg = showResults . compile . parse
@@ -176,7 +177,21 @@ dispatch Print = printt
 pushglobal :: Name -> GmState -> GmState
 pushglobal f state =  let a = M.lookup f (getGlobals state) in
   case a of Just add -> putStack (add: getStack state) state
-            Nothing  -> error ("pushglobal: global " ++ f ++ " not found in globals")
+            Nothing  -> packOrError f state
+
+packOrError :: Name -> GmState -> GmState
+packOrError ('P':'a':'c':'k':'{':t:',':n:_) state = 
+  let globals = getGlobals state
+      stack = getStack state
+      heap = getHeap state
+      (newHeap, a) = hAlloc heap node
+      nInt = (digitToInt n)
+      tInt = (digitToInt t)
+      node =  (NGlobal nInt [Pack tInt nInt, Update 0, Unwind]) 
+      newGlobal = "Pack{" ++ show t ++ "," ++ show n ++ "}" in 
+  putStack (a:stack) $ putHeap newHeap $ putGlobals newGlobal a state
+
+packOrError f _ = error ("pushglobal: global " ++ f ++ " not found in globals")
  
 -- pushes an integer node onto the heap
 pushint :: Int -> GmState -> GmState

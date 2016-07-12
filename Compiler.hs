@@ -73,7 +73,11 @@ compileC (EVar v) env | elem v (Map.keys env) =
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
     compileC e2 env ++ compileC e1 (argOffset 1 env) ++ [Mkap]
-compileC (EConstr t n es) env = compileECH n es env ++ [Pack t n]
+compileC (EConstr t n es) env = 
+    let tt = show t
+        nn = show n
+        pack = "Pack{" ++ tt ++ "," ++ nn ++ "}" in 
+    compileECH n es env ++ [Pushglobal pack]
 compileC (ECase e alts) env = compileE e env ++
     [Casejump $ compileAlts compileESS alts env]
 compileC (ELet recursive defs e) args
