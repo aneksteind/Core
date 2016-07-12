@@ -73,7 +73,8 @@ compileC (EVar v) env | elem v (Map.keys env) =
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
     compileC e2 env ++ compileC e1 (argOffset 1 env) ++ [Mkap]
-compileC (EConstr t n es) env = compileECH n es env ++ [Pack t n]
+compileC (EConstr t n es) env | length es == n = compileECH n es env ++ [Pack t n]
+                              | otherwise = error $ "too many or too little arguments in constructor " ++ show t
 compileC (ECase e alts) env = compileE e env ++
     [Casejump $ compileAlts compileESS alts env]
 compileC (ELet recursive defs e) args
@@ -100,7 +101,8 @@ compileE (EAp (EAp (EVar ">") e1) e2) env = compileEB ">" e1 e2 env
 compileE (EAp (EVar "negate") e1) env = compileE e1 env ++ [Neg]
 compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env = 
     compileE predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
-compileE (EConstr t n es) env = compileECH n es env ++ [Pack t n]
+compileE (EConstr t n es) env | length es == n = compileECH n es env ++ [Pack t n]
+                              | otherwise = error $ "too many or too little arguments in constructor " ++ show t
 compileE e env = compileC e env ++ [Eval]
 
 compileECH :: Int -> [CoreExpr] -> GmEnvironment -> GmCode

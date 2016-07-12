@@ -1,2 +1,2 @@
-f x = Pack{2,2}((case x of <1> -> 1; <2> -> 2;), Pack{1,0}(9));
+f x = Pack{2,2}((case x of <1> -> 1; <2> -> 2;), Pack{1,0}());
 main = f 2
