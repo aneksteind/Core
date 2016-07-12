@@ -145,8 +145,8 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
   ("compose", ["f","g","x"], EAp (EVar "f")
   (EAp (EVar "g") (EVar "x"))),
   ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")),
-  ("true", [], EConstr 1 0 []),
-  ("false", [], EConstr 2 0 [])]
+  ("true", [], EConstr 2 0 []),
+  ("false", [], EConstr 1 0 [])]
 
 builtInDyadic :: ASSOC Name Instruction
 builtInDyadic = 
