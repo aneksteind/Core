@@ -12,10 +12,10 @@ main :: IO ()
 main = do
     (file:_) <- getArgs
     contents <- readFile file
-    let parsed = parseTokens . scanTokens
-    --print $ parsed contents
+    let compiled = compile . parseTokens . scanTokens
+    --print $ compiled contents
     run contents
 
-run = putStrLn . showResults 
+run = putStrLn . showFinalResult 
     . eval . compile 
     . parseTokens . scanTokens

@@ -3,7 +3,7 @@ module Compiler where
 import Types
 import GMachine
 import Data.List
-import qualified Data.Map as Map (keys, fromList, map, lookup, toList)
+import qualified Data.Map as Map (keys, fromList, map, member, lookup, toList)
 
 
 
@@ -11,7 +11,7 @@ import qualified Data.Map as Map (keys, fromList, map, lookup, toList)
 -- finds the main super combinator and evaluates it
 -- heap initialized containing nodes for each global sc
 compile :: CoreProgram -> GmState
-compile program = ("", initialCode, [], [], heap, globals, statInitial) where
+compile program = ([], initialCode, [], [], [], heap, globals, statInitial) where
     (heap,globals) = buildInitialHeap program
 
 -- allocates nodes for each global sc
@@ -19,22 +19,7 @@ compile program = ("", initialCode, [], [], heap, globals, statInitial) where
 buildInitialHeap :: CoreProgram -> (GmHeap, GmGlobals)
 buildInitialHeap program = (heap, Map.fromList globals) where
     (heap, globals) = mapAccumL allocateSc hInitial compiled
-    compiled = map compileSc (preludeDefs ++ program) ++ compiledPrimitives :: [GmCompiledSC]
-
-compiledPrimitives :: [GmCompiledSC]
-compiledPrimitives = 
-    [("+", 2, [Push 1, Eval, Push 1, Eval, Add, Update 2, Pop 2, Unwind]),
-    ("-", 2, [Push 1, Eval, Push 1, Eval, Sub, Update 2, Pop 2, Unwind]),
-    ("*", 2, [Push 1, Eval, Push 1, Eval, Mul, Update 2, Pop 2, Unwind]),
-    ("/", 2, [Push 1, Eval, Push 1, Eval, Div, Update 2, Pop 2, Unwind]),
-    ("negate", 1, [Push 0, Eval, Neg, Update 1, Pop 1, Unwind]),
-    ("==", 2, [Push 1, Eval, Push 1, Eval, Eq, Update 2, Pop 2, Unwind]),
-    ("/=", 2, [Push 1, Eval, Push 1, Eval, Ne, Update 2, Pop 2, Unwind]),
-    ("<", 2, [Push 1, Eval, Push 1, Eval, Lt, Update 2, Pop 2, Unwind]),
-    ("<=", 2, [Push 1, Eval, Push 1, Eval, Le, Update 2, Pop 2, Unwind]),
-    (">", 2, [Push 1, Eval, Push 1, Eval, Gt, Update 2, Pop 2, Unwind]),
-    (">=", 2, [Push 1, Eval, Push 1, Eval, Ge, Update 2, Pop 2, Unwind]),
-    ("if", 3, [Push 0, Eval, Cond [Push 1] [Push 2], Update 3, Pop 3, Unwind])]
+    compiled = map compileSc (preludeDefs ++ program ++ primitives)
 
 -- creates a tuple of a heap, and a name/address pair
 allocateSc :: GmHeap -> GmCompiledSC -> (GmHeap, (Name, Addr))
@@ -43,21 +28,30 @@ allocateSc heap (name, nargs, instructions) = (newHeap, (name, addr)) where
 
 -- start with the main function and unwind from there
 initialCode :: GmCode
-initialCode = [Pushglobal "main", Unwind, Print]
+initialCode = [Pushglobal "main", Eval, Print]
 
 -- each super combinator compiled with this function
 -- zips variable names with numbers 0..
 -- returns a triple containing name, arguments, and instructions
 -- compileSc is also  ::   CoreScDefn -> GmCompiledSC
 compileSc :: (Name, [Name], CoreExpr) -> GmCompiledSC
-compileSc (name, env, body) = (name, length env, compileR body $ Map.fromList $ zip env [0..])
+compileSc (name, env, body) = 
+    let d = length env in 
+    (name, d, compileR d body $ Map.fromList $ zip env [0..])
 
 -- produces the instructions for the current CoreExpr
 -- appends those instructions to the finish, which is to
 -- slide the stack and to unwind
-compileR :: GmCompiler
-compileR e env = let n = length env in 
-    compileE e env ++ [Update n, Pop n, Unwind]
+compileR :: Int -> GmCompiler
+compileR d (ELet recursive defs e) env 
+    | recursive = compileLetrec (compileR (d + length defs)) Null defs e env
+    | otherwise = compileLet (compileR (d + length defs)) Null defs e env
+compileR d (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env =
+    compileB predicate env ++ [Cond (compileR d e1 env) (compileR d e2 env)]
+compileR d (ECase e alts) env = compileE e env ++
+    [Casejump $ compileD (compileAR d) alts env]
+compileR d e env =
+    compileE e env ++ [Update d, Pop d, Unwind]
 
 -- var: if var is part of the environment then push n
 -- var: otherwise, push global and make it part of the env
@@ -73,87 +67,107 @@ compileC (EVar v) env | elem v (Map.keys env) =
 compileC (ENum nm) env = [Pushint nm]
 compileC (EAp e1 e2) env = 
     compileC e2 env ++ compileC e1 (argOffset 1 env) ++ [Mkap]
-compileC (EConstr t n es) env | length es == n = compileECH n es env ++ [Pack t n]
+compileC (EConstr t n es) env | length es == n = compileConstrArgs n es env ++ [Pack t n]
                               | otherwise = error $ "too many or too little arguments in constructor " ++ show t
 compileC (ECase e alts) env = compileE e env ++
-    [Casejump $ compileAlts compileESS alts env]
+    [Casejump $ compileD compileAE alts env]
 compileC (ELet recursive defs e) args
-    | recursive = compileLetrec compileC defs e args
-    | otherwise = compileLet compileC defs e args
+    | recursive = compileLetrec compileC (Final Slide) defs e args
+    | otherwise = compileLet compileC (Final Slide) defs e args
 
 compileE :: GmCompiler
-compileE (ENum nm) env = [Pushint nm]
+compileE (ENum i) env = [Pushint i]
 compileE (ELet recursive defs e) args
-    | recursive = compileLetrec compileE defs e args
-    | otherwise = compileLet compileE defs e args
+    | recursive = compileLetrec compileE (Final Slide) defs e args
+    | otherwise = compileLet compileE (Final Slide) defs e args
 compileE (ECase e alts) env = compileE e env ++
-    [Casejump $ compileAlts compileESS alts env]
-compileE (EAp (EAp (EVar "+") e1) e2) env = compileEB "+" e1 e2 env
-compileE (EAp (EAp (EVar "-") e1) e2) env = compileEB "-" e1 e2 env
-compileE (EAp (EAp (EVar "*") e1) e2) env = compileEB "*" e1 e2 env
-compileE (EAp (EAp (EVar "/") e1) e2) env = compileEB "/" e1 e2 env
-compileE (EAp (EAp (EVar "<") e1) e2) env = compileEB "<" e1 e2 env
-compileE (EAp (EAp (EVar "<=") e1) e2) env = compileEB "<=" e1 e2 env
-compileE (EAp (EAp (EVar "==") e1) e2) env = compileEB "==" e1 e2 env
-compileE (EAp (EAp (EVar "/=") e1) e2) env = compileEB "/=" e1 e2 env
-compileE (EAp (EAp (EVar ">=") e1) e2) env = compileEB ">=" e1 e2 env
-compileE (EAp (EAp (EVar ">") e1) e2) env = compileEB ">" e1 e2 env
-compileE (EAp (EVar "negate") e1) env = compileE e1 env ++ [Neg]
-compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env = 
-    compileE predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
-compileE (EConstr t n es) env | length es == n = compileECH n es env ++ [Pack t n]
-                              | otherwise = error $ "too many or too little arguments in constructor " ++ show t
+    [Casejump $ compileD compileAE alts env]
+compileE (EConstr t n es) env | length es == n =
+    compileConstrArgs n es env ++ [Pack t n]
+                              | otherwise =
+    error $ "too many or too little arguments in constructor " ++ show t
+compileE e@(EAp (EAp (EVar op) e1) e2) env = 
+    let maybeBinop = Map.lookup op builtInDyadic
+        mkCode Arith = [Mkint]
+        mkCode Comp = [Mkbool] in
+    case maybeBinop of 
+        Just (binop, dyad) -> compileB e env ++ mkCode dyad
+        Nothing    -> compileC e env ++ [Eval]
+compileE b@(EAp (EVar "negate") e1) env = compileB b env ++ [Mkint]
+compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env =
+    compileB predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
 compileE e env = compileC e env ++ [Eval]
 
-compileECH :: Int -> [CoreExpr] -> GmEnvironment -> GmCode
-compileECH numArgs (e:es) env = 
+compileB :: GmCompiler
+compileB (ENum i) env = [Pushbasic i]
+compileB (ELet recursive defs e) args
+    | recursive = compileLetrec compileB (Final Pop) defs e args
+    | otherwise = compileLet compileB (Final Pop) defs e args
+compileB e@(EAp (EAp (EVar op) e1) e2) env = 
+    let maybeBinop = Map.lookup op builtInDyadic in
+    case maybeBinop of 
+        Just (binop,_) -> compileB e2 env ++ compileB e1 env ++ [binop]
+        _ -> compileE e env
+compileB (EAp (EVar "negate") e1) env = compileB e1 env ++ [Neg]
+compileB (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env =
+    compileB predicate env ++ [Cond (compileB e1 env) (compileB e2 env)]
+compileB e env = compileE e env ++ [Get]
+
+compileConstrArgs :: Int -> [CoreExpr] -> GmEnvironment -> GmCode
+compileConstrArgs numArgs (e:es) env = 
     let compiled = foldl iterCode base es
         iterCode = (\(code, n) x -> ((compileC x (argOffset n env))++code, n+1))
         base = ((compileC e env),1) 
     in fst compiled
-compileECH numArgs [] env = []
+compileConstrArgs numArgs [] env = []
 
-compileEB :: String -> CoreExpr -> CoreExpr -> GmEnvironment -> GmCode
-compileEB op e0 e1 env =
-    let maybeBinop = Map.lookup op builtInDyadic
-        compileBinop bo = compileE e1 env ++ compileE e0 (argOffset 1 env) ++ [bo]
-        errorMsg = "compileEB: operation " ++ op ++ " not defined" in
-    case maybeBinop of Just binop -> compileBinop binop
-                       Nothing -> error errorMsg
-       
 -- (Int -> GmCompiler): compiler for alternative bodies
 -- [CoreAlt]: the list of alternatives
 -- GmEnvironment: the current environment
 -- [(Int, GmCode)]: list of alternative code sequences                 
-compileAlts :: (Int -> GmCompiler) -> [CoreAlt] -> GmEnvironment -> [(Int, GmCode)] 
-compileAlts comp alts env = 
+compileD :: (Int -> GmCompiler) -> [CoreAlt] -> GmEnvironment -> [(Int, GmCode)] 
+compileD comp alts env = 
     [(tag, comp (length names) body (Map.fromList (zip names [0..] ++ (Map.toList $ argOffset (length names) env))))
         | (tag, names, body) <- alts]
 
-compileESS :: Int -> GmCompiler
-compileESS offset expr env = [Split offset] ++ compileE expr env ++ [Slide offset]
+compileAE :: Int -> GmCompiler
+compileAE offset expr env = [Split offset] ++ compileE expr env ++ [Slide offset]
 
-compileLetrec :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
-compileLetrec comp defs expr env =
-    [Alloc n] ++ compileLetrecH defs newEnv (n-1) ++
-    comp expr newEnv ++ [Slide n] where
-        newEnv = compileArgs defs env
-        n = (length defs)
+compileAR :: Int -> Int -> GmCompiler
+compileAR d offset expr env = [Split offset] ++ compileR (offset + d) expr env
+
+compileLet :: GmCompiler -> FinalInstruction -> [(Name, CoreExpr)] -> GmCompiler
+compileLet comp (Final inst) defs expr env = 
+    compileLetH2 comp defs expr env ++ [inst (length defs)]
+compileLet comp Null defs expr env =
+    compileLetH2 comp defs expr env
+
+compileLetH :: [(Name, CoreExpr)] -> GmEnvironment -> GmCode
+compileLetH [] env = []
+compileLetH ((name, expr):defs) env = 
+    compileC expr env ++ compileLetH defs (argOffset 1 env)
+
+compileLetH2 :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
+compileLetH2 comp defs expr env = compileLetH defs env ++ comp expr newEnv where
+    newEnv = compileArgs defs env
+
+compileLetrec :: GmCompiler -> FinalInstruction -> [(Name, CoreExpr)] -> GmCompiler
+compileLetrec comp (Final inst) defs expr env =
+    compileLetrecH2 comp defs expr env ++ [inst (length defs)]
+compileLetrec comp Null defs expr env =
+    compileLetrecH2 comp defs expr env
 
 compileLetrecH :: [(Name, CoreExpr)] -> GmEnvironment -> Int -> GmCode
 compileLetrecH [] env n = []
 compileLetrecH ((name, expr):defs) env n = 
     compileC expr env ++ [Update n] ++ (compileLetrecH defs env (n-1))
 
-compileLet :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
-compileLet comp defs expr env = 
-    compileLetH defs env ++ comp expr newEnv ++ [Slide (length defs)] where
+compileLetrecH2 :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
+compileLetrecH2 comp defs expr env = 
+    [Alloc n] ++ compileLetrecH defs newEnv (n-1) ++
+    comp expr newEnv where
         newEnv = compileArgs defs env
-
-compileLetH :: [(Name, CoreExpr)] -> GmEnvironment -> GmCode
-compileLetH [] env = []
-compileLetH ((name, expr):defs) env = 
-    compileC expr env ++ compileLetH defs (argOffset 1 env)
+        n = (length defs)
 
 compileArgs :: [(Name, CoreExpr)] -> GmEnvironment -> GmEnvironment
 compileArgs defs env = 

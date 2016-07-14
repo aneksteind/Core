@@ -11,52 +11,61 @@ import qualified Data.Map as M (lookup, insert)
 --------------------------- GET/SET GMSTATE ---------------------------
 
 getOutput :: GmState -> GmOutput
-getOutput (o,i ,stack, dump, heap, globals, stats) = o
+getOutput (o,i ,stack, dump, vstack, heap, globals, stats) = o
 
 putOutput :: GmOutput -> GmState -> GmState
-putOutput newO (output, code, stack, dump, heap, globals, stats) = (newO, code, stack, dump, heap, globals, stats)
+putOutput newO (output, code, stack, dump, vstack, heap, globals, stats) =
+ (newO, code, stack, dump, vstack, heap, globals, stats)
 
 getCode :: GmState -> GmCode
-getCode (output, code, stack, dump, heap, globals, stats) = code
+getCode (output, code, stack, dump, vstack, heap, globals, stats) = code
 
 putCode :: GmCode -> GmState -> GmState
-putCode newCode (output, oldCode, stack, dump, heap, globals, stats) = (output, newCode, stack, dump, heap, globals, stats)
+putCode newCode (output, oldCode, stack, dump, vstack, heap, globals, stats) =
+ (output, newCode, stack, dump, vstack, heap, globals, stats)
 
 getStack :: GmState -> GmStack
-getStack (output, i, stack, dump, heap, globals, stats) = stack
+getStack (output, i, stack, dump, vstack, heap, globals, stats) = stack
 
 putStack :: GmStack -> GmState -> GmState
-putStack newStack (output, i, oldStack, dump, heap, globals, stats) =
- (output, i, newStack, dump, heap, globals, stats)
+putStack newStack (output, i, oldStack, dump, vstack, heap, globals, stats) =
+ (output, i, newStack, dump, vstack, heap, globals, stats)
 
 getDump :: GmState -> GmDump
-getDump (output, i, stack, dump, heap, globals, stats) = dump
+getDump (output, i, stack, dump, vstack, heap, globals, stats) = dump
 
 putDump :: GmDump -> GmState -> GmState
-putDump newDump (output, i, stack, dump, heap, globals, stats) =
- (output, i, stack, newDump, heap, globals, stats)
+putDump newDump (output, i, stack, dump, vstack, heap, globals, stats) =
+ (output, i, stack, newDump, vstack, heap, globals, stats)
+
+getVStack :: GmState -> GmVStack
+getVStack (o, i, stack, dump, vstack, heap, globals, stats) = vstack
+
+putVStack :: GmVStack -> GmState -> GmState
+putVStack newVstack (o, i, stack, dump, vstack, heap, globals, stats) =
+ (o, i, stack, dump, newVstack, heap, globals, stats)
 
 getHeap :: GmState -> GmHeap
-getHeap (output, i, stack, dump, heap, globals, stats) = heap
+getHeap (output, i, stack, dump, vstack, heap, globals, stats) = heap
 
 putHeap :: GmHeap -> GmState -> GmState
-putHeap newHeap (output, i, stack, dump, oldHeap, globals, stats) =
- (output, i, stack, dump, newHeap, globals, stats)
+putHeap newHeap (output, i, stack, dump, vstack, oldHeap, globals, stats) =
+ (output, i, stack, dump, vstack, newHeap, globals, stats)
 
 getGlobals :: GmState -> GmGlobals
-getGlobals (output, i, stack, dump, heap, globals, stats) = globals
+getGlobals (output, i, stack, dump, vstack, heap, globals, stats) = globals
 
 putGlobals :: Name -> Addr -> GmState -> GmState
-putGlobals name addr (output, code, stack, dump, heap, globals, stats) = 
+putGlobals name addr (output, code, stack, dump, vstack, heap, globals, stats) = 
   let newGlobals = M.insert name addr globals
-  in (output, code, stack, dump, heap, newGlobals, stats)
+  in (output, code, stack, dump, vstack, heap, newGlobals, stats)
 
 getStats :: GmState -> GmStats
-getStats (output, i, stack, dump, heap, globals, stats) = stats
+getStats (output, i, stack, dump, vstack, heap, globals, stats) = stats
 
 putStats :: GmStats -> GmState -> GmState
-putStats newStats (output, i, stack, dump, heap, globals, oldStats) =
- (output, i, stack, dump, heap, globals, newStats)
+putStats newStats (output, i, stack, dump, vstack, heap, globals, oldStats) =
+ (output, i, stack, dump, vstack, heap, globals, newStats)
 
 statInitial :: GmStats
 statInitial = 0
@@ -146,7 +155,10 @@ step state = dispatch i (putCode is state) where
 dispatch :: Instruction -> GmState -> GmState
 dispatch (Pushglobal f) = pushglobal f
 dispatch (Pushint n) = pushint n
+dispatch (Pushbasic n) = pushbasic n
 dispatch Mkap = mkap
+dispatch Mkint = mkInt
+dispatch Mkbool = mkBool
 dispatch (Push n) = push n
 dispatch (Pop n) = pop n
 dispatch (Update n) = update n
@@ -170,6 +182,7 @@ dispatch (Pack t n) = pack t n
 dispatch (Casejump cases) = casejump cases
 dispatch (Split n) = split n
 dispatch Print = printt
+dispatch Get = get
 
 -- finds a unique global node in the heap
 -- puts the address of the global node at the top of the stack
@@ -287,54 +300,38 @@ allocNodes n heap = (heap2, a:as) where
 
 boxInteger :: Int -> GmState -> GmState
 boxInteger n state = 
-  putStack (a: getStack state) $ putHeap newHeap state where
+  putVStack (a: getVStack state) $ putHeap newHeap state where
     (newHeap, a) = hAlloc (getHeap state) (NNum n)
 
 boxBoolean :: Bool -> GmState -> GmState
 boxBoolean b state =
-  putStack (a: getStack state) $ putHeap newHeap state where
+  putVStack (a: getVStack state) $ putHeap newHeap state where
     (newHeap, a) = hAlloc (getHeap state) (NConstr bool [])
     bool | b = 2
          | otherwise = 1
 
 comparison :: (Int -> Int -> Bool) -> StateTran
-comparison = primitive2 boxBoolean unboxInteger
-
-unboxInteger :: Addr -> GmState -> Int
-unboxInteger a state =
-  let maybeNode = (hLookup (getHeap state) a)
-      unboxErr =  "unbox: unboxing a non-integer"
-      heapErr = "unbox: node at address " ++ (show a) ++ " not found in heap"
-  in case maybeNode of Just (NNum i) -> i
-                       Just _        -> error heapErr
-                       _             -> error unboxErr
-
-primitive1 ::  Boxer b -> Unboxer a -> MOperator a b -> StateTran
-primitive1 box unbox op state = 
-  box (op $ unbox a state) (putStack as state) where
-    (a:as) = getStack state
-
-primitive2 :: Boxer b -> Unboxer a -> DOperator a b -> StateTran
-primitive2 box unbox op state = 
-  box (op (unbox a0 state) (unbox a1 state)) (putStack as state) where
-    (a0:a1:as) = getStack state
+comparison op state = 
+  let (a0:a1:as) = getVStack state
+      bool = (a0 `op` a1)
+      vBool n = putVStack (n:as) state in
+  if bool then vBool 2 else vBool 1    
 
 arithmetic1 :: MOperator Int Int -> StateTran
-arithmetic1 = primitive1 boxInteger unboxInteger
+arithmetic1 op state = putVStack (op a : v) state where
+  (a:v) = getVStack state
 
 arithmetic2 :: DOperator Int Int -> StateTran
-arithmetic2 = primitive2 boxInteger unboxInteger
+arithmetic2 op state = putVStack ((a0 `op` a1):as) state where
+    (a0:a1:as) = getVStack state
 
 cond :: GmCode -> GmCode -> GmState -> GmState
-cond i1 i2 state =
-  let (a:as) = getStack state
-      heap = getHeap state
-      i = getCode state
-      maybeNode = hLookup heap a in
-  case maybeNode of Just (NConstr 2 _) -> putCode (i1++i) $ putStack as state
-                    Just (NConstr 1 _) -> putCode (i2++i) $ putStack as state
-                    Just _        -> error "cond: address on top does not point to NNum"
-                    _             -> error "cond: address not found in heap"
+cond t f state =
+  let (n:v) = getVStack state
+      i = getCode state in
+  case n of 2 -> putCode (t++i) $ putVStack v state
+            1 -> putCode (f++i) $ putVStack v state
+            _ -> error $ "cond: the number " ++ show n ++ " is not valid"
 
 
 add :: GmState -> GmState
@@ -406,7 +403,38 @@ printt state =
       i = getCode state
       appP xs = take (2 * (length xs)) $ cycle [Eval, Print]
       maybeNode = hLookup heap a in 
-  case maybeNode of Just (NNum n) -> putStack as $ putOutput (output ++ (show n)) state
-                    Just (NConstr t s) -> putCode ((appP s)++i) $ putStack (s++as) state
-                    _ -> error $ "address " ++ show a ++ " not found in heap"
+  case maybeNode of 
+    Just (NNum n) -> putStack as $ putOutput (output ++ (show n)) state
+    Just (NConstr t s) -> putOutput ("<" ++ show t ++ "> ") $ putCode ((appP s)++i) $ putStack (s++as) state
+    _ -> error $ "address " ++ show a ++ " not found in heap"
 
+pushbasic :: Int -> GmState -> GmState
+pushbasic n state = 
+  let vstack = getVStack state in putVStack (n:vstack) state
+
+mkBool :: GmState -> GmState
+mkBool state = 
+  let stack = getStack state
+      heap = getHeap state
+      (t:v) = getVStack state
+      (newHeap, add) = hAlloc heap (NConstr t [])
+  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
+
+mkInt :: GmState -> GmState
+mkInt state = 
+  let stack = getStack state
+      heap = getHeap state
+      (n:v) = getVStack state
+      (newHeap, add) = hAlloc heap (NNum n)
+  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
+
+get :: GmState -> GmState
+get state = 
+  let (a:as) = getStack state
+      heap = getHeap state
+      maybeNode = hLookup heap a
+      v = getVStack state
+      getH val = putStack as $ putVStack (val:v) state
+  in case maybeNode of Just (NConstr t _) -> getH t
+                       Just (NNum n)      -> getH n
+                       _ -> error "get: node not found in heap"

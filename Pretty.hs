@@ -131,6 +131,9 @@ mkMultiAp n e1 e2 = foldl EAp e1 (take n e2s)
 
 --------------------------- SHOW COMPILATION ---------------------------
 
+showFinalResult :: [GmState] -> [Char]
+showFinalResult states = iDisplay $ showOutput (last states)
+
 showResults :: [GmState] -> [Char]
 showResults states = iDisplay (iConcat [
   iNewline, iStr "-----Supercombinator definitions-----", iNewline, iNewline,
@@ -182,6 +185,7 @@ showCase (i, code) =
 showState :: GmState -> Iseq
 showState s = iConcat [showOutput s, iNewline,
                        showStack s, iNewline,
+                       showVStack s, iNewline,
                        showDump s, iNewline,
                        showInstructions (getCode s), iNewline]
 
@@ -199,6 +203,10 @@ showStackItem s a =
   let maybeAddress = (hLookup (getHeap s) a) in
     case maybeAddress of Just address -> iConcat [iStr (showaddr a), iStr ": ", showNode s a address]
                          Nothing -> error "showStackItem: node not found in heap"
+
+showVStack :: GmState -> Iseq
+showVStack s = iConcat [iStr "Vstack:[",
+  iInterleave (iStr ", ") (map iNum (getVStack s))] `iAppend` iStr "]"
 
 showDump :: GmState -> Iseq
 showDump s = iConcat [iStr " Dump:[",

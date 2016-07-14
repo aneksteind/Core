@@ -59,6 +59,7 @@ type GmState = (GmOutput,   -- current output
                 GmCode,     -- current instruction stream
                 GmStack,    -- current stack
                 GmDump,     -- a stack for WHNF reductions
+                GmVStack,   -- current v-stack
                 GmHeap,     -- heap of nodes
                 GmGlobals,  -- global addresses in heap
                 GmStats)    -- statistics
@@ -72,6 +73,8 @@ type GmStack = [Addr]
 type GmDump = [GmDumpItem]
 type GmDumpItem = (GmCode, GmStack)
 
+type GmVStack = [Int]
+
 type GmHeap = Heap Node
 
 type GmGlobals = ASSOC Name Addr
@@ -79,10 +82,14 @@ type GmGlobals = ASSOC Name Addr
 type GmStats = Int
 
 data Instruction = Unwind
+                 | Pushbasic Int
                  | Pushglobal Name
                  | Pushint Int
                  | Push Int
+                 | Get
                  | Mkap
+                 | Mkint
+                 | Mkbool
                  | Update Int
                  | Pop Int 
                  | Slide Int
@@ -126,6 +133,8 @@ type ASSOC k a = Map k a
 
 type Addr = Int
 
+data FinalInstruction = Final (Int -> Instruction) | Null
+
 --------------------------- COMPILER ---------------------------
 
 type GmCompiledSC = (Name, Int, GmCode)
@@ -144,15 +153,33 @@ preludeDefs = [ ("I", ["x"], EVar "x"),
   (EAp (EVar "g") (EVar "x"))),
   ("compose", ["f","g","x"], EAp (EVar "f")
   (EAp (EVar "g") (EVar "x"))),
-  ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f")),
-  ("true", [], EConstr 2 0 []),
-  ("false", [], EConstr 1 0 [])]
+  ("twice", ["f"], EAp (EAp (EVar "compose") (EVar "f")) (EVar "f"))]
 
-builtInDyadic :: ASSOC Name Instruction
+primitives :: [(Name, [Name], CoreExpr)]
+primitives = 
+  [("+", ["x","y"], (EAp (EAp (EVar "+") (EVar "x")) (EVar "y"))),
+   ("-", ["x","y"], (EAp (EAp (EVar "-") (EVar "x")) (EVar "y"))),
+   ("*", ["x","y"], (EAp (EAp (EVar "*") (EVar "x")) (EVar "y"))),
+   ("/", ["x","y"], (EAp (EAp (EVar "/") (EVar "x")) (EVar "y"))),
+   ("negate", ["x"], (EAp (EVar "negate") (EVar "x"))),
+   ("==", ["x","y"], (EAp (EAp (EVar "==") (EVar "x")) (EVar "y"))),
+   ("˜=", ["x","y"], (EAp (EAp (EVar "˜=") (EVar "x")) (EVar "y"))),
+   (">=", ["x","y"], (EAp (EAp (EVar ">=") (EVar "x")) (EVar "y"))),
+   (">", ["x","y"], (EAp (EAp (EVar ">") (EVar "x")) (EVar "y"))),
+   ("<=", ["x","y"], (EAp (EAp (EVar "<=") (EVar "x")) (EVar "y"))),
+   ("<", ["x","y"], (EAp (EAp (EVar "<") (EVar "x")) (EVar "y"))),
+   ("if", ["c","t","f"],
+      (EAp (EAp (EAp (EVar "if") (EVar "c")) (EVar "t")) (EVar "f"))),
+   ("True", [], (EConstr 2 0 [])),
+   ("False", [], (EConstr 1 0 []))]
+
+builtInDyadic :: ASSOC Name (Instruction, Dyad)
 builtInDyadic = 
-  fromList [("+", Add), ("-", Sub), ("*", Mul), ("/", Div),
-            ("==", Eq), ("/=", Ne), (">=", Ge),
-            (">", Gt), ("<=", Le), ("<", Lt)]
+  fromList [("+", (Add, Arith)), ("-", (Sub, Arith)), ("*", (Mul, Arith)), ("/", (Div, Arith)),
+            ("==", (Eq, Comp)), ("/=", (Ne, Comp)), (">=", (Ge, Comp)),
+            (">", (Gt, Comp)), ("<=", (Le, Comp)), ("<", (Lt, Comp))]
+
+
 
 --------------------------- ARITHMETIC ---------------------------
 type Boxer b = (b -> GmState -> GmState)
@@ -161,6 +188,7 @@ type MOperator a b = (a -> b)
 type DOperator a b = (a -> a -> b)
 type StateTran = (GmState -> GmState)
 
+data Dyad = Arith | Comp
 
 
 
