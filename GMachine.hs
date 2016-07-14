@@ -69,10 +69,7 @@ statIncSteps s = s+1
 statGetSteps :: GmStats -> Int
 statGetSteps s = s
 
--- pairs the next free address with the supplied node
--- increases the size of the heap by 1
--- adds the pair to the heap
--- returns the new heap and the new address that was added
+-- adds a node the heap, a new address is created
 hAlloc :: Heap a -> a -> (Heap a, Addr)
 hAlloc (size, address, cts) n = ((size+1, address+1, (address,n) : cts),address)
 
@@ -101,9 +98,8 @@ hIsnull a = a == 0
 showaddr :: Addr -> [Char]
 showaddr a = "#" ++ show a
 
--- TODO: account for failure
 remove :: [(Int,a)] -> Int -> [(Int,a)]
-remove [] a = []
+remove [] a = error "hUpdate: nothing in the heap matches the given address"
 remove ((val,n):cts) match | match == val = cts
                       | match /= val = (val,n) : remove cts match
 
@@ -168,14 +164,15 @@ dispatch (Split n) = split n
 dispatch Print = printt
 dispatch Get = get
 
--- finds a unique global node in the heap
--- puts the address of the global node at the top of the stack
+-- finds the global node in the heap
+-- pushes the address of the global node onto the stack
 pushglobal :: Name -> GmState -> GmState
 pushglobal f state =  let a = M.lookup f (getGlobals state) in
   case a of Just add -> putStack (add: getStack state) state
             Nothing  -> error ("pushglobal: global " ++ f ++ " not found in globals")
  
--- pushes an integer node onto the heap
+-- adds an integer node onto the heap
+-- pushes the new address onto the stack
 pushint :: Int -> GmState -> GmState
 pushint n state = 
   let maybeAddr = M.lookup (show n) (getGlobals state)
@@ -184,6 +181,7 @@ pushint n state =
   case maybeAddr of Just addr -> (putStack (addr: getStack state) state) where
                     Nothing -> pushintHelper $ putGlobals (show n) a state
 
+-- pushes an int ont the V stack
 pushbasic :: Int -> GmState -> GmState
 pushbasic n state = 
   let vstack = getVStack state in putVStack (n:vstack) state
@@ -197,6 +195,7 @@ mkap state =
   (newHeap, newAddress) = hAlloc (getHeap state) (NAp a1 a2)
   (a1:a2:addresses) = getStack state
 
+-- moves an int value from the V stack to the heap
 mkInt :: GmState -> GmState
 mkInt state = 
   let stack = getStack state
@@ -205,6 +204,7 @@ mkInt state =
       (newHeap, add) = hAlloc heap (NNum n)
   in putVStack v $ putStack (add:stack) $ putHeap newHeap state
 
+-- moves a bool value from the V stack to the heap
 mkBool :: GmState -> GmState
 mkBool state = 
   let stack = getStack state
@@ -220,13 +220,12 @@ push n state =
   let as = getStack state
       a = (as !! n) in putStack (a:as) state
 
--- takes the address at the top of the stack
--- drops the next n addresses from the stack
--- reattaches the address to the stack
+-- drops the top n addresses from the stack
 pop :: Int -> GmState -> GmState
 pop n state = putStack (drop n stack) state where
   stack = getStack state
 
+-- updates the nth address in the stack with an indirection node
 update :: Int -> GmState -> GmState
 update n state = 
   let (a:as) = getStack state
@@ -234,10 +233,7 @@ update n state =
 
 
 ------------------------------------------------------------
--- always the last section
--- if NNum then the g-machine has terminated
--- if NAp then we continue to unwind from the next node
--- if NGlobal then we put it's code to the state and continue
+-- unravels the spine of the graph
 unwind :: GmState -> GmState
 unwind state = 
   let stack@(a:as) = getStack state
@@ -259,6 +255,7 @@ unwind state =
       case n of Just node -> newState node        
                 Nothing -> error "unwind: address not found in heap"
 
+-- takes the code and address from the dump and returns them
 updateFromDump :: Addr -> GmDump -> GmState -> GmState
 updateFromDump address dump state = 
   case dump of [] -> state
@@ -286,17 +283,21 @@ slide :: Int -> GmState -> GmState
 slide n state = putStack (a : drop n as) state where
   (a:as) = getStack state
 
+-- puts empty indirection nodes in the heap for updating later
 alloc :: Int -> GmState -> GmState
 alloc n state = let (newHeap, addrs) = allocNodes n (getHeap state)
                     stack = getStack state in
   putHeap newHeap $ putStack (addrs ++ stack) state
 
+-- allocates an empty indirection node in the heap
 allocNodes :: Int -> GmHeap -> (GmHeap, [Addr])
 allocNodes 0 heap = (heap, [])
 allocNodes n heap = (heap2, a:as) where
   (heap1, as) = allocNodes (n-1) heap
   (heap2, a) = hAlloc heap1 (NInd hNull)
 
+-- unwinds top address node, 
+-- puts the rest of code and addresses in the dump
 evalI :: GmState -> GmState
 evalI state = 
   let code = getCode state
@@ -339,6 +340,7 @@ gt state = comparison (>) state
 ge :: GmState -> GmState
 ge state = comparison (>=) state
 
+-- compares the top two numbers on the V stack
 comparison :: (Int -> Int -> Bool) -> StateTran
 comparison op state = 
   let (a0:a1:as) = getVStack state
@@ -346,16 +348,21 @@ comparison op state =
       vBool n = putVStack (n:as) state in
   if bool then vBool 2 else vBool 1    
 
+-- applies the monadic operation to the top V stack number
 arithmetic1 :: MOperator Int Int -> StateTran
 arithmetic1 op state = putVStack (op a : v) state where
   (a:v) = getVStack state
 
+-- applies the dyadic operator to the top two V stack numbers
 arithmetic2 :: DOperator Int Int -> StateTran
 arithmetic2 op state = putVStack ((a0 `op` a1):as) state where
     (a0:a1:as) = getVStack state
 
 ------------------------------------------------------------
 
+-- gets the top value of V stack,
+-- if 2 (True), evaluate the t code
+-- if 1 (False), evaluate the f code
 cond :: GmCode -> GmCode -> GmState -> GmState
 cond t f state =
   let (n:v) = getVStack state
@@ -364,6 +371,8 @@ cond t f state =
             1 -> putCode (f++i) $ putVStack v state
             _ -> error $ "cond: the number " ++ show n ++ " is not valid"
 
+-- creates a new data type, adds it to heap
+-- adds address of new datatype to stack
 pack :: Int -> Int -> GmState -> GmState
 pack t n state = 
   let stack = getStack state
@@ -371,6 +380,7 @@ pack t n state =
       (newHeap, a) = hAlloc heap (NConstr t (take n stack)) in 
   putStack (a:(drop n stack)) $ putHeap newHeap state
 
+-- adds the code of the matching case expression to the code
 casejump :: [(Int, GmCode)] -> GmState -> GmState
 casejump cases state =
   let (a:s) = getStack state
@@ -384,6 +394,7 @@ casejump cases state =
   case maybeNode of Just (NConstr t ss) -> putCode ((typeCode t)++i) state
                     _ -> error "casejump: node not found in heap"
 
+-- adds the addresses referenced by the data type to the stack
 split :: Int -> GmState -> GmState
 split n state = 
   let (a:as) = getStack state
@@ -392,6 +403,7 @@ split n state =
   case maybeNC of Just (NConstr t s) -> putStack (s++as) state
                   _ -> error "split: node not found in heap"
 
+-- puts the output of the program into the output
 printt :: GmState -> GmState
 printt state = 
   let (a:as) = getStack state
@@ -405,6 +417,8 @@ printt state =
     Just (NConstr t s) -> putOutput ("<" ++ show t ++ "> ") $ putCode ((appP s)++i) $ putStack (s++as) state
     _ -> error $ "address " ++ show a ++ " not found in heap"
 
+-- gets a number or a data type's #args from the heap
+-- adds it to the V stack
 get :: GmState -> GmState
 get state = 
   let (a:as) = getStack state

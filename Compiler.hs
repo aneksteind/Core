@@ -7,9 +7,8 @@ import qualified Data.Map as M (Map, keys, fromList, map, mapAccum, member, look
 
 
 
--- turns a program into an initial state for the gmachine
--- finds the main super combinator and evaluates it
--- heap initialized containing nodes for each global sc
+-- sets initial state
+-- binds the supercombinators to the environment
 compile :: CoreProgram -> GmState
 compile program = ([], initialCode, [], [], [], heap, globals, statInitial) where
     (heap,globals) = buildInitialHeap program
@@ -21,14 +20,13 @@ initialCode = [Pushglobal "main", Eval, Print]
 statInitial :: GmStats
 statInitial = 0
 
--- allocates nodes for each global sc
--- produces a list with all the names and pairs
+-- bind sc's, allocate corresponding nodes in heap
 buildInitialHeap :: CoreProgram -> (GmHeap, GmGlobals)
 buildInitialHeap program = (heap, M.fromList globals) where
     (heap, globals) = mapAccumL allocateSc hInitial compiled
     compiled = map compileSc (preludeDefs ++ program ++ primitives)
 
--- creates a tuple of a heap, and a name/address pair
+-- allocate node in heap for supercombinator
 allocateSc :: GmHeap -> GmCompiledSC -> (GmHeap, (Name, Addr))
 allocateSc heap (name, nargs, instructions) = (newHeap, (name, addr)) where
     (newHeap, addr) = hAlloc heap (NGlobal nargs instructions)
@@ -36,18 +34,13 @@ allocateSc heap (name, nargs, instructions) = (newHeap, (name, addr)) where
 hInitial :: Heap a
 hInitial = (0, 1, [])
 
--- each super combinator compiled with this function
--- zips variable names with numbers 0..
--- returns a triple containing name, arguments, and instructions
--- compileSc is also  ::   CoreScDefn -> GmCompiledSC
+-- compile super combinator
 compileSc :: (Name, [Name], CoreExpr) -> GmCompiledSC
 compileSc (name, env, body) = 
     let d = length env in 
     (name, d, compileR d body $ M.fromList $ zip env [0..])
 
--- produces the instructions for the current CoreExpr
--- appends those instructions to the finish, which is to
--- slide the stack and to unwind
+-- compile body (Expr) of super combinator, top level
 compileR :: Int -> GmCompiler
 compileR d (ELet recursive defs e) env 
     | recursive = compileLetrec (compileR (d + length defs)) Null defs e env
@@ -59,13 +52,8 @@ compileR d (ECase e alts) env = compileE e env ++
 compileR d e env =
     compileE e env ++ [Update d, Pop d, Unwind]
 
--- var: if var is part of the environment then push n
--- var: otherwise, push global and make it part of the env
--- int: push int
--- app: compile each expression, append it to the instructions
--- app: offset the env by 1 so that when compileC (EVar) evaluates..
--- (cont) it will push for the correct variable
-
+-- strictly compile expression to WHNF
+-- leaves a pointer to the expression on top of stack
 compileE :: GmCompiler
 compileE (ENum i) env = [Pushint i]
 compileE (ELet recursive defs e) args
@@ -89,6 +77,9 @@ compileE (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env =
     compileB predicate env ++ [Cond (compileE e1 env) (compileE e2 env)]
 compileE e env = compileC e env ++ [Eval]
 
+-- compiles expression that needs evaluation to WHNF
+-- also must be of type Int or Bool
+-- leaves the result on top of the V stack
 compileB :: GmCompiler
 compileB (ENum i) env = [Pushbasic i]
 compileB (ELet recursive defs e) args
@@ -104,6 +95,7 @@ compileB (EAp (EAp (EAp (EVar "if") predicate) e1) e2) env =
     compileB predicate env ++ [Cond (compileB e1 env) (compileB e2 env)]
 compileB e env = compileE e env ++ [Get]
 
+-- lazily compile expression
 compileC :: GmCompiler
 compileC (EVar v) env | elem v (M.keys env) =
     let n = M.lookup v env in case n of Just num -> [Push num]
@@ -120,21 +112,21 @@ compileC (ELet recursive defs e) args
     | recursive = compileLetrec compileC (Final Slide) defs e args
     | otherwise = compileLet compileC (Final Slide) defs e args
 
--- (Int -> GmCompiler): compiler for alternative bodies
--- [CoreAlt]: the list of alternatives
--- GmEnvironment: the current environment
--- [(Int, GmCode)]: list of alternative code sequences                 
+-- compile cases for case expressions               
 compileD :: (Int -> GmCompiler) -> [CoreAlt] -> GmEnvironment -> [(Int, GmCode)] 
 compileD comp alts env = 
     [(tag, comp (length names) body (M.fromList (zip names [0..] ++ (M.toList $ argOffset (length names) env))))
         | (tag, names, body) <- alts]
 
+-- compiles the code for an alternative for E context
 compileAE :: Int -> GmCompiler
 compileAE offset expr env = [Split offset] ++ compileE expr env ++ [Slide offset]
 
+-- compiles the code for an alternative for R context
 compileAR :: Int -> Int -> GmCompiler
 compileAR d offset expr env = [Split offset] ++ compileR (offset + d) expr env
 
+-- compiles let expression, last instruction depends on context
 compileLet :: GmCompiler -> FinalInstruction -> [(Name, CoreExpr)] -> GmCompiler
 compileLet comp (Final inst) defs expr env = 
     compileLetH2 comp defs expr env ++ [inst (length defs)]
@@ -150,6 +142,7 @@ compileLetH2 :: GmCompiler -> [(Name, CoreExpr)] -> GmCompiler
 compileLetH2 comp defs expr env = compileLetH defs env ++ comp expr newEnv where
     newEnv = compileArgs defs env
 
+-- compiles recursive let expression, last instruction depends on context
 compileLetrec :: GmCompiler -> FinalInstruction -> [(Name, CoreExpr)] -> GmCompiler
 compileLetrec comp (Final inst) defs expr env =
     compileLetrecH2 comp defs expr env ++ [inst (length defs)]
@@ -168,11 +161,13 @@ compileLetrecH2 comp defs expr env =
         newEnv = compileArgs defs env
         n = (length defs)
 
+-- compile the arguments of a let expression
 compileArgs :: [(Name, CoreExpr)] -> GmEnvironment -> GmEnvironment
 compileArgs defs env = 
     M.fromList $ zip (map fst defs) [n-1, n-2 .. 0] ++ (M.toList $ argOffset n env) where
         n = length defs        
 
+-- compile the arguments of a data type
 compileConstrArgs :: Int -> [CoreExpr] -> GmEnvironment -> GmCode
 compileConstrArgs numArgs (e:es) env = 
     let compiled = foldl iterCode base es
@@ -181,6 +176,6 @@ compileConstrArgs numArgs (e:es) env =
     in fst compiled
 compileConstrArgs numArgs [] env = []
 
---shifts the number associated with a variable by n in the environment
+-- offsets env bindings by n
 argOffset :: Int -> GmEnvironment -> GmEnvironment
 argOffset n env = M.map (\v -> v + n) env
