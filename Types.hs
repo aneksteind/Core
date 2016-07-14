@@ -33,12 +33,6 @@ recursive = True
 nonRecursive :: IsRec
 nonRecursive = False
 
-bindersOf :: [(a,b)] -> [a]
-bindersOf defns = [name | (name,rhs) <- defns]
-
-rhssOf :: [(a,b)] -> [b]
-rhssOf defns = [rhs | (name,rhs) <- defns]
-
 isAtomicExpr :: Expr a -> Bool
 isAtomicExpr (EVar v) = True
 isAtomicExpr (ENum n) = True
@@ -77,7 +71,7 @@ type GmVStack = [Int]
 
 type GmHeap = Heap Node
 
-type GmGlobals = ASSOC Name Addr
+type GmGlobals = Map Name Addr
 
 type GmStats = Int
 
@@ -99,7 +93,7 @@ data Instruction = Unwind
                  | Eq | Ne | Lt | Le | Gt | Ge 
                  | Cond GmCode GmCode
                  | Pack Int Int
-                 | Casejump [(Int, GmCode)]
+                 | Casejump [(Int, GmCode)] -- TODO: map
                  | Split Int
                  | Print deriving (Show)
 
@@ -127,9 +121,7 @@ instance Eq Node where
   NConstr a b == NConstr c d = False -- not needed
 
 
-type Heap a = (Int, Addr, [(Int, a)])
-
-type ASSOC k a = Map k a
+type Heap a = (Int, Addr, [(Int, a)]) -- TODO: map
 
 type Addr = Int
 
@@ -141,7 +133,7 @@ type GmCompiledSC = (Name, Int, GmCode)
 
 type GmCompiler = CoreExpr -> GmEnvironment -> GmCode
 
-type GmEnvironment = ASSOC Name Int
+type GmEnvironment = Map Name Int
 
 --------------------------- PRELUDE ---------------------------
 
@@ -173,7 +165,7 @@ primitives =
    ("True", [], (EConstr 2 0 [])),
    ("False", [], (EConstr 1 0 []))]
 
-builtInDyadic :: ASSOC Name (Instruction, Dyad)
+builtInDyadic :: Map Name (Instruction, Dyad)
 builtInDyadic = 
   fromList [("+", (Add, Arith)), ("-", (Sub, Arith)), ("*", (Mul, Arith)), ("/", (Div, Arith)),
             ("==", (Eq, Comp)), ("/=", (Ne, Comp)), (">=", (Ge, Comp)),

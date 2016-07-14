@@ -4,11 +4,7 @@ import Types
 import Parser
 import qualified Data.Map as M (lookup, insert)
 
---runProg :: [Char] -> [Char]
---runProg = showResults . compile . parse
-
-
---------------------------- GET/SET GMSTATE ---------------------------
+--------------------------- GMSTATE FUNCTIONS ---------------------------
 
 getOutput :: GmState -> GmOutput
 getOutput (o,i ,stack, dump, vstack, heap, globals, stats) = o
@@ -67,18 +63,11 @@ putStats :: GmStats -> GmState -> GmState
 putStats newStats (output, i, stack, dump, vstack, heap, globals, oldStats) =
  (output, i, stack, dump, vstack, heap, globals, newStats)
 
-statInitial :: GmStats
-statInitial = 0
-
 statIncSteps :: GmStats -> GmStats
 statIncSteps s = s+1
 
 statGetSteps :: GmStats -> Int
 statGetSteps s = s
-
---------------------------- HEAP FUNCTIONS ---------------------------
-hInitial :: Heap a
-hInitial = (0, 1, [])
 
 -- pairs the next free address with the supplied node
 -- increases the size of the heap by 1
@@ -91,11 +80,6 @@ hAlloc (size, address, cts) n = ((size+1, address+1, (address,n) : cts),address)
 -- TODO: see remove function
 hUpdate :: Heap a -> Addr -> a -> Heap a
 hUpdate (size, free, cts) a n = (size, free, (a,n) : remove cts a)
-
--- removes a (Name,Address) pair
--- adds the address back to the available list
---hFree :: Heap a -> Addr -> Heap a
---hFree (size, free, cts) a = (size-1, a:free, remove cts a)
 
 -- looks up a node in a heap
 hLookup :: Heap Node -> Addr -> Maybe Node
@@ -134,15 +118,15 @@ eval state = state : restStates where
                | otherwise     = eval nextState
     nextState = doAdmin (step state)
 
--- increases the statistics, puts the new value into the state
-doAdmin :: GmState -> GmState
-doAdmin s = putStats (statIncSteps (getStats s)) s
-
 -- checks to see if the current state is the final one
 -- the state is final if all of the code has been executed
 gmFinal :: GmState -> Bool
 gmFinal s = case (getCode s) of []        -> True
                                 otherwise -> False
+
+-- increases the statistics, puts the new value into the state
+doAdmin :: GmState -> GmState
+doAdmin s = putStats (statIncSteps (getStats s)) s
 
 -- makes a state transistion based on the instruction
 -- takes out the current instruction from the instruction list
@@ -200,6 +184,10 @@ pushint n state =
   case maybeAddr of Just addr -> (putStack (addr: getStack state) state) where
                     Nothing -> pushintHelper $ putGlobals (show n) a state
 
+pushbasic :: Int -> GmState -> GmState
+pushbasic n state = 
+  let vstack = getVStack state in putVStack (n:vstack) state
+
 -- takes the 2 addresses at the top of the address stack
 -- and combines them into one address
 -- also constructs an application node and puts it in the heap
@@ -208,6 +196,22 @@ mkap state =
  putHeap newHeap (putStack (newAddress:addresses) state) where
   (newHeap, newAddress) = hAlloc (getHeap state) (NAp a1 a2)
   (a1:a2:addresses) = getStack state
+
+mkInt :: GmState -> GmState
+mkInt state = 
+  let stack = getStack state
+      heap = getHeap state
+      (n:v) = getVStack state
+      (newHeap, add) = hAlloc heap (NNum n)
+  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
+
+mkBool :: GmState -> GmState
+mkBool state = 
+  let stack = getStack state
+      heap = getHeap state
+      (t:v) = getVStack state
+      (newHeap, add) = hAlloc heap (NConstr t [])
+  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
 
 -- gets the current address stack
 -- pushes the A(nth) address on top of the stack
@@ -219,26 +223,17 @@ push n state =
 -- takes the address at the top of the stack
 -- drops the next n addresses from the stack
 -- reattaches the address to the stack
-slide :: Int -> GmState -> GmState
-slide n state = putStack (a : drop n as) state where
-  (a:as) = getStack state
+pop :: Int -> GmState -> GmState
+pop n state = putStack (drop n stack) state where
+  stack = getStack state
 
 update :: Int -> GmState -> GmState
 update n state = 
   let (a:as) = getStack state
   in putHeap (hUpdate (getHeap state) (as !! n) (NInd a)) (putStack as state)
 
--- TODO: better error handling
-getArg :: Node -> Maybe Addr
-getArg (NAp a1 a2) = return a2
 
--- takes the address at the top of the stack
--- drops the next n addresses from the stack
--- reattaches the address to the stack
-pop :: Int -> GmState -> GmState
-pop n state = putStack (drop n stack) state where
-  stack = getStack state
-
+------------------------------------------------------------
 -- always the last section
 -- if NNum then the g-machine has terminated
 -- if NAp then we continue to unwind from the next node
@@ -279,12 +274,17 @@ rearrange n heap as =
   case newAs of Just addrs -> take n addrs ++ drop n as
                 Nothing -> error "rearrange: address not found in heap" 
   
-evalI :: GmState -> GmState
-evalI state = 
-  let code = getCode state
-      (a:as) = getStack state
-      dump = getDump state in
-  putCode [Unwind] $ putStack [a] $ putDump ((code, as):dump) state
+getArg :: Node -> Maybe Addr
+getArg (NAp a1 a2) = return a2
+
+------------------------------------------------------------
+
+-- takes the address at the top of the stack
+-- drops the next n addresses from the stack
+-- reattaches the address to the stack
+slide :: Int -> GmState -> GmState
+slide n state = putStack (a : drop n as) state where
+  (a:as) = getStack state
 
 alloc :: Int -> GmState -> GmState
 alloc n state = let (newHeap, addrs) = allocNodes n (getHeap state)
@@ -297,42 +297,14 @@ allocNodes n heap = (heap2, a:as) where
   (heap1, as) = allocNodes (n-1) heap
   (heap2, a) = hAlloc heap1 (NInd hNull)
 
+evalI :: GmState -> GmState
+evalI state = 
+  let code = getCode state
+      (a:as) = getStack state
+      dump = getDump state in
+  putCode [Unwind] $ putStack [a] $ putDump ((code, as):dump) state
 
-boxInteger :: Int -> GmState -> GmState
-boxInteger n state = 
-  putVStack (a: getVStack state) $ putHeap newHeap state where
-    (newHeap, a) = hAlloc (getHeap state) (NNum n)
-
-boxBoolean :: Bool -> GmState -> GmState
-boxBoolean b state =
-  putVStack (a: getVStack state) $ putHeap newHeap state where
-    (newHeap, a) = hAlloc (getHeap state) (NConstr bool [])
-    bool | b = 2
-         | otherwise = 1
-
-comparison :: (Int -> Int -> Bool) -> StateTran
-comparison op state = 
-  let (a0:a1:as) = getVStack state
-      bool = (a0 `op` a1)
-      vBool n = putVStack (n:as) state in
-  if bool then vBool 2 else vBool 1    
-
-arithmetic1 :: MOperator Int Int -> StateTran
-arithmetic1 op state = putVStack (op a : v) state where
-  (a:v) = getVStack state
-
-arithmetic2 :: DOperator Int Int -> StateTran
-arithmetic2 op state = putVStack ((a0 `op` a1):as) state where
-    (a0:a1:as) = getVStack state
-
-cond :: GmCode -> GmCode -> GmState -> GmState
-cond t f state =
-  let (n:v) = getVStack state
-      i = getCode state in
-  case n of 2 -> putCode (t++i) $ putVStack v state
-            1 -> putCode (f++i) $ putVStack v state
-            _ -> error $ "cond: the number " ++ show n ++ " is not valid"
-
+------------------------------------------------------------
 
 add :: GmState -> GmState
 add state = arithmetic2 (+) state
@@ -366,6 +338,31 @@ gt state = comparison (>) state
 
 ge :: GmState -> GmState
 ge state = comparison (>=) state
+
+comparison :: (Int -> Int -> Bool) -> StateTran
+comparison op state = 
+  let (a0:a1:as) = getVStack state
+      bool = (a0 `op` a1)
+      vBool n = putVStack (n:as) state in
+  if bool then vBool 2 else vBool 1    
+
+arithmetic1 :: MOperator Int Int -> StateTran
+arithmetic1 op state = putVStack (op a : v) state where
+  (a:v) = getVStack state
+
+arithmetic2 :: DOperator Int Int -> StateTran
+arithmetic2 op state = putVStack ((a0 `op` a1):as) state where
+    (a0:a1:as) = getVStack state
+
+------------------------------------------------------------
+
+cond :: GmCode -> GmCode -> GmState -> GmState
+cond t f state =
+  let (n:v) = getVStack state
+      i = getCode state in
+  case n of 2 -> putCode (t++i) $ putVStack v state
+            1 -> putCode (f++i) $ putVStack v state
+            _ -> error $ "cond: the number " ++ show n ++ " is not valid"
 
 pack :: Int -> Int -> GmState -> GmState
 pack t n state = 
@@ -407,26 +404,6 @@ printt state =
     Just (NNum n) -> putStack as $ putOutput (output ++ (show n)) state
     Just (NConstr t s) -> putOutput ("<" ++ show t ++ "> ") $ putCode ((appP s)++i) $ putStack (s++as) state
     _ -> error $ "address " ++ show a ++ " not found in heap"
-
-pushbasic :: Int -> GmState -> GmState
-pushbasic n state = 
-  let vstack = getVStack state in putVStack (n:vstack) state
-
-mkBool :: GmState -> GmState
-mkBool state = 
-  let stack = getStack state
-      heap = getHeap state
-      (t:v) = getVStack state
-      (newHeap, add) = hAlloc heap (NConstr t [])
-  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
-
-mkInt :: GmState -> GmState
-mkInt state = 
-  let stack = getStack state
-      heap = getHeap state
-      (n:v) = getVStack state
-      (newHeap, add) = hAlloc heap (NNum n)
-  in putVStack v $ putStack (add:stack) $ putHeap newHeap state
 
 get :: GmState -> GmState
 get state = 

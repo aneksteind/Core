@@ -2,13 +2,14 @@ module Pretty where
 
 import Types
 import GMachine
-import Data.Map (toList)
+import qualified Data.Map as M (toList, member)
 
 pprint :: CoreProgram -> String
 pprint prog = iDisplay (pprProgram prog)
 
 pprProgram :: CoreProgram -> Iseq
-pprProgram scdefns = flip iAppend iNewline (iInterleave (iStr ";" `iAppend` iNewline) $ map pprScDefn scdefns)
+pprProgram scdefns = 
+  flip iAppend iNewline (iInterleave (iStr ";" `iAppend` iNewline) $ map pprScDefn scdefns)
 
 pprScDefn :: CoreScDefn -> Iseq
 pprScDefn (name, vars, expr) = 
@@ -20,15 +21,10 @@ pprScDefn (name, vars, expr) =
 pprExpr :: CoreExpr -> Iseq
 pprExpr (ENum n) = iNum n
 pprExpr (EVar v) = iStr v
-pprExpr (EAp (EAp (EVar "+") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "-") e1) e2) = iConcat [ pprAExpr e1, iStr " - ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "*") e1) e2) = iConcat [ pprAExpr e1, iStr " * ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "/") e1) e2) = iConcat [ pprAExpr e1, iStr " / ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "<") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "<=") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar "==") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar ">=") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
-pprExpr (EAp (EAp (EVar ">") e1) e2) = iConcat [ pprAExpr e1, iStr " + ", pprAExpr e2 ]
+pprExpr (EAp (EAp (EVar op) e1) e2) | M.member op builtInDyadic = 
+  iConcat [ pprAExpr e1,iStr " ", iStr op,iStr " ", pprAExpr e2 ]
+                                    | otherwise = 
+  (pprExpr e1) `iAppend` (iStr " ") `iAppend` (pprAExpr e2)
 pprExpr (EAp e1 e2) = (pprExpr e1) `iAppend` (iStr " ") `iAppend` (pprAExpr e2)
 pprExpr (ELet isrec defns expr) =
     iConcat [ iStr keyword, iIndent (pprDefns defns), iStr " in " `iAppend` pprExpr expr ]
@@ -43,7 +39,6 @@ pprExpr (EConstr i1 i2 es) =
   iConcat [ iStr "Pack {", iStr $ show i1,
             iStr ", ", iStr $ show i2, iStr "}"] `iAppend`
             (iConcat $ map pprExpr es)
-
 
 pprPatterns :: [CoreAlt] -> Iseq
 pprPatterns patterns = 
@@ -137,7 +132,7 @@ showFinalResult states = iDisplay $ showOutput (last states)
 showResults :: [GmState] -> [Char]
 showResults states = iDisplay (iConcat [
   iNewline, iStr "-----Supercombinator definitions-----", iNewline, iNewline,
-  iInterleave iNewline (map (showSC s) (toList $ getGlobals s)),
+  iInterleave iNewline (map (showSC s) (M.toList $ getGlobals s)),
   iNewline, iNewline, iStr "-----State transitions-----", iNewline, iNewline,
   iLayn (map showState states), iNewline,
   showStats (last states)]) where (s:ss) = states
@@ -236,7 +231,7 @@ shortShowStack stack =
 showNode :: GmState -> Addr -> Node -> Iseq
 showNode s a (NNum n) = iNum n
 showNode s a (NGlobal n g) = iConcat [iStr "Global ", iStr v]
-  where v = head [n | (n,b) <- toList $ getGlobals s, a==b]
+  where v = head [n | (n,b) <- M.toList $ getGlobals s, a==b]
 showNode s a (NAp a1 a2) = iConcat [iStr "Ap ", iStr (showaddr a1),
   iStr " ", iStr (showaddr a2)]
 showNode s a (NInd ia) = iConcat [iStr "Ind ", iStr (showaddr ia)]

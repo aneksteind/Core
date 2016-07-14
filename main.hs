@@ -13,7 +13,6 @@ main = do
     (file:_) <- getArgs
     contents <- readFile file
     let compiled = compile . parseTokens . scanTokens
-    --print $ compiled contents
     run contents
 
 run = putStrLn . showFinalResult 
