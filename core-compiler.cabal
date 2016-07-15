@@ -1,0 +1,35 @@
+name:                core-compiler
+version:             0.1.0.0
+synopsis:            Initial project template from stack
+description:         Please see README.md
+homepage:            https://github.com/githubuser/core-compiler#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2016 Author name here
+category:            Web
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+executable core-compiler-exe
+  main-is:             Main.hs
+  hs-source-dirs:      src
+  other-modules:       Parser
+                     , Lexer
+                     , Types
+                     , Pretty
+                     , Compiler
+                     , GMachine
+
+  build-depends:       base >=4.7
+                     , containers
+                     , array
+  build-tools:         happy, alex
+  default-language:    Haskell2010
+  ghc-options: -Wall
+
+source-repository head
+  type:     git
+  location: https://github.com/githubuser/core-compiler

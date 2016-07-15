@@ -1,0 +1,11 @@
+x = Pack{3,2}(2 + z, 8);
+y = False;
+z = 4;
+
+and x y = case x of
+        <3> a b -> case y of
+                   <2> -> x;
+                   <1> -> x;;
+        <1> -> y;;
+
+main = and x y
