@@ -1,5 +1,0 @@
-f x = x + 2;
-main = f (n - 1);
-n = 2
-
--- works mark 5

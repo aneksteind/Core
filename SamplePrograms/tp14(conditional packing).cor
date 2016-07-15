@@ -1,7 +1,0 @@
-if3 c t f = case c of
-    <3> -> t > 1;
-    <1> -> f > 1;;
-
-blub = Pack{3,0}();
-
-main = if3 blub 5 4
