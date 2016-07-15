@@ -1,8 +1,9 @@
 module Types where
 import Data.Map
 
---------------------------- GRAMMAR ---------------------------
+--------------------------- CORE GRAMMAR ---------------------------
 
+-- AST of the Core language
 data Expr a = EVar Name
             | ENum Int
             | EConstr Int Int [Expr a]
@@ -110,7 +111,7 @@ data Node = NNum Int -- Numbers
           | NAp Addr Addr -- Applications
           | NGlobal Int GmCode -- Globals
           | NInd Addr -- Indirections
-          | NConstr Int [Addr]
+          | NConstr Int [Addr] -- Constructing a data type
           deriving (Show)
 
 instance Eq Node where
@@ -125,6 +126,7 @@ type Heap a = (Int, Addr, [(Int, a)]) -- TODO: map
 
 type Addr = Int
 
+-- the final instruction of a given code sequence
 data FinalInstruction = Final (Int -> Instruction) | Null
 
 --------------------------- COMPILER ---------------------------

@@ -4,6 +4,7 @@ import Types
 import GMachine
 import qualified Data.Map as M (toList, member)
 
+-- pretty prints a core program
 pprint :: CoreProgram -> String
 pprint prog = iDisplay (pprProgram prog)
 
@@ -11,6 +12,7 @@ pprProgram :: CoreProgram -> Iseq
 pprProgram scdefns = 
   flip iAppend iNewline (iInterleave (iStr ";" `iAppend` iNewline) $ map pprScDefn scdefns)
 
+-- pretty prints a supercombinator definition
 pprScDefn :: CoreScDefn -> Iseq
 pprScDefn (name, vars, expr) = 
     (iStr name) `iAppend` iStr " " `iAppend` (iInterleave (iStr " ") (map iStr vars))
@@ -18,6 +20,7 @@ pprScDefn (name, vars, expr) =
      where maybeSpace = case vars of [] -> iStr "= "
                                      _ -> iStr " = "
 
+-- pretty prints expressions
 pprExpr :: CoreExpr -> Iseq
 pprExpr (ENum n) = iNum n
 pprExpr (EVar v) = iStr v
@@ -40,6 +43,7 @@ pprExpr (EConstr i1 i2 es) =
             iStr ", ", iStr $ show i2, iStr "}"] `iAppend`
             (iConcat $ map pprExpr es)
 
+-- pretty prints case alts
 pprPatterns :: [CoreAlt] -> Iseq
 pprPatterns patterns = 
   iNewline `iAppend` iInterleave (iStr "; " `iAppend` iNewline) (map pprPattern patterns)
@@ -53,6 +57,7 @@ pprPattern (int, [], result) = iConcat $
     [iStr "<", iStr $ show int, iStr ">",
      iStr " -> ", pprExpr result]
 
+-- pretty prints let definitions
 pprDefns :: [(Name, CoreExpr)] -> Iseq
 pprDefns defns = iNewline `iAppend` iInterleave sep (map pprDefn defns)
                  where sep = iConcat [ iStr ";", iNewline ]
@@ -60,6 +65,7 @@ pprDefns defns = iNewline `iAppend` iInterleave sep (map pprDefn defns)
 pprDefn :: (Name, CoreExpr) -> Iseq
 pprDefn (name, expr) = iConcat [ iStr name, iStr " = ", pprExpr expr ]
 
+-- pretty prints a single expression
 pprAExpr :: CoreExpr -> Iseq
 pprAExpr e | isAtomicExpr e = pprExpr e
            | otherwise  = (iStr "(") `iAppend` (pprExpr e) `iAppend` (iStr ")")
@@ -67,20 +73,25 @@ pprAExpr e | isAtomicExpr e = pprExpr e
 iNil :: Iseq
 iNil = INil
 
+-- pretty prints a string
 iStr :: String -> Iseq
 iStr str = IStr str
 
+-- pretty prints an int
 iNum :: Int -> Iseq
 iNum n = IStr $ show n
 
+-- pretty prints digits with proper spacing
 iFWNum :: Int -> Int -> Iseq
 iFWNum width n = iStr (space (width - length digits) ++ digits)
     where digits = show n
 
+-- prints out a numbered list of other sequences
 iLayn :: [Iseq] -> Iseq
 iLayn seqs = iConcat (map lay_item (zip [1..] seqs))
     where lay_item (n, seq) = iConcat [ iFWNum 4 n, iStr ") ", iIndent seq, iNewline ]
 
+-- append two iseqs
 iAppend :: Iseq -> Iseq -> Iseq
 iAppend seq1 seq2 | seq2 == INil = seq1
                   | seq1 == INil = seq1
@@ -109,6 +120,7 @@ flatten col ((IIndent s, indent):seqs) = (flatten col ((s, col+4):seqs))
 space :: Int -> String
 space n = take n $ repeat ' '
 
+-- appends a list of iseqs
 iConcat :: [Iseq] -> Iseq
 iConcat iseqs = foldr (\iseq acc -> iseq `iAppend` acc) iNil iseqs
 
@@ -116,6 +128,7 @@ iInterleave :: Iseq -> [Iseq] -> Iseq
 iInterleave sep (i:is) = iConcat $ i : prependToAll sep is
 iInterleave sep [] = iNil
 
+-- puts a character before each element in a list
 prependToAll sep (i:is) = sep : (i : prependToAll sep is)
 prependToAll sep [] = [] 
 
