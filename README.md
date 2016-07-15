@@ -9,8 +9,7 @@ stack exec core-compiler [file]
 ```
 
 
-- I have included a quick script that will run all of the test programs in the folder provided.
-- As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
+As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
 
 ##About the Project
 

@@ -28,7 +28,6 @@ executable core-compiler-exe
                      , array
   build-tools:         happy, alex
   default-language:    Haskell2010
-  ghc-options: -Wall
 
 source-repository head
   type:     git
