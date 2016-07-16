@@ -17,9 +17,16 @@ The Core language is a simple functional language that many other functional lan
 
 This project was meant to introduce me to the world of compilers as well as state transition and stack machines. I believe that it was a great next step after the [interpreter](https://github.com/aneksteind/Shkeem) that I implemented earlier and before writing a compiler that targets the machine itself. 
 
-This project will be updated here and there to improve efficiency (there are many places where this can and will be done), readability, and abstraction, as well as to make a proper package using stack. **_As such, this is still a work in progress._**
+This project will be updated here and there to improve efficiency (there are many places where this can and will be done), readability, error handling, and abstraction. **_As such, this is still a work in progress._**
 
-The project itself is broken into a series of steps:
-Lexing(Alex) -> Parsing(Happy) -> Compiling(Compiler) -> Executing/Interpreting(GMachine)
+The project itself is broken into the following series of steps:  
+- Lexing (using Alex)
+- Parsing (using Happy)
+- Compilation to initial G-Code
+- Evaluation by the G-Machine
+  
+There will be an option to run using a tag such as -v which will print out each evaluation step the G-Machine makes in the near future.
+  
+More information will be added soon ...
 
     
