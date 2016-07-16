@@ -10,10 +10,16 @@ import Compiler
 
 main :: IO ()
 main = do
-    (file:_) <- getArgs
-    contents <- readFile file
-    run contents
+    args <- getArgs
+    case args of 
+        ("run-steps":file:_) -> run showResults file
+        (file:_) -> run showFinalResult file
+        _ -> error "incorrect arguments"
 
-run = putStrLn . showFinalResult 
-    . eval . compile 
+run :: ([GmState] -> String) -> String -> IO ()
+run output file = do
+    contents <- readFile file
+    runH output contents
+
+runH output = putStrLn . output . eval . compile 
     . parseTokens . scanTokens
