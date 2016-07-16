@@ -6,8 +6,9 @@ As of this commit, the way to run this program is as follows:
 ```
 stack build  
 stack exec core-compiler [file]
+stack exec core-compiler run-steps [file]
 ```
-There will be an option to run using a tag such as ``` stack exec core-compiler -v [file] ``` which will print out each evaluation step the G-Machine makes in the near future. The functionality is already in the project via the ```showResults``` function. Replace ```showFinalResult``` in ```Main.hs``` with this function to view the steps the G-Machine makes.
+The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works.
 
 As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
 
