@@ -7,9 +7,11 @@ As of this commit, the way to run this program is as follows:
 stack build  
 stack exec core-compiler [file]
 ```
-
+There will be an option to run using a tag such as ``` stack exec core-compiler -v [file] ``` which will print out each evaluation step the G-Machine makes in the near future. The functionality is already in the project via the ```showResults``` function. Replace ```showFinalResult``` in ```Main.hs``` with this function to view the steps the G-Machine makes.
 
 As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
+
+When the project is ready, I will export a library to hackage that will sort of streamline the process of linking to the core compiler, sort of like connecting to LLVM IR in the llvm-general package.
 
 ##About the Project
 
@@ -25,8 +27,7 @@ The project itself is broken into the following series of steps:
 - Compilation to initial G-Code
 - Evaluation by the G-Machine
   
-There will be an option to run using a tag such as -v which will print out each evaluation step the G-Machine makes in the near future.
-  
+
 More information will be added soon ...
 
     
