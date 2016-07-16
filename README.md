@@ -5,7 +5,7 @@
 As of this commit, the way to run this program is as follows:
 ```
 stack build  
-stack exec core-compiler [file]
+stack exec core-compiler [file] -- OR
 stack exec core-compiler run-steps [file]
 ```
 The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works.
