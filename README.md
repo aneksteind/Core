@@ -28,6 +28,12 @@ The project itself is broken into the following series of steps:
 - Compilation to initial G-Code
 - Evaluation by the G-Machine
   
+## To Do
+- implement better parse error handling in Alex/Happy
+- possibly implement GmState as a State monad
+- implement the stack project as a library
+- generate documentation on Haddock
+- upload to Hackage
 
 More information will be added soon ...
 
