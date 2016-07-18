@@ -2,7 +2,7 @@
 module Lexer where
 }
 
-%wrapper "basic"
+%wrapper "posn"
 
 $digit = 0-9
 $alpha = [a-zA-Z]
@@ -22,45 +22,45 @@ tokens :-
     $white+                     ;
     $eol                        ;
     "--".*                      ;
-    $digit+                     { \s -> TokenInt (read s) }
-    @string                     { \s -> TokenString (init (tail s)) }
-    @char                       { \s -> TokenChar (head (tail s)) }
-    [\+]                        { \s -> TokenAdd }
-    [\-]                        { \s -> TokenMin }
-    [\*]                        { \s -> TokenMul }
-    [\/]                        { \s -> TokenDiv }
-    [\=]                        { \s -> TokenAssign }
-    [\\]                        { \s -> TokenLamVars }
-    "."                         { \s -> TokenLamExpr }
-    "<"                         { \s -> TokenLT }
-    "<="                        { \s -> TokenLTE }
-    "=="                        { \s -> TokenEQ }
-    "/="                        { \s -> TokenNEQ }
-    ">="                        { \s -> TokenGTE }
-    ">"                         { \s -> TokenGT }
-    "&"                         { \s -> TokenAnd }
-    "|"                         { \s -> TokenOr }
-    let                         { \s -> TokenLet }
-    letrec                      { \s -> TokenLetRec }
-    in                          { \s -> TokenIn }
-    case                        { \s -> TokenCase }
-    of                          { \s -> TokenOf }
-    "->"                        { \s -> TokenArrow }
-    Pack                        { \s -> TokenPack }
-    "{"                         { \s -> TokenLBrace }
-    "}"                         { \s -> TokenRBrace }
-    "("                         { \s -> TokenLParen }
-    ")"                         { \s -> TokenRParen }
-    ";"                         { \s -> TokenSemiColon }
-    ","                         { \s -> TokenComma }
-    @id                         { \s -> TokenSym s }
+    $digit+                     { tok (\p s -> T (TokenInt) p s) }
+    [\+]                        { tok (\p s -> T (TokenAdd) p s) }
+    [\-]                        { tok (\p s -> T (TokenMin) p s) }
+    [\*]                        { tok (\p s -> T (TokenMul) p s) }
+    [\/]                        { tok (\p s -> T (TokenDiv) p s) }
+    [\=]                        { tok (\p s -> T (TokenAssign) p s) }
+    [\\]                        { tok (\p s -> T (TokenLamVars) p s) }
+    "."                         { tok (\p s -> T (TokenLamExpr) p s) }
+    "<"                         { tok (\p s -> T (TokenLT) p s) }
+    "<="                        { tok (\p s -> T (TokenLTE) p s) }
+    "=="                        { tok (\p s -> T (TokenEQ) p s) }
+    "/="                        { tok (\p s -> T (TokenNEQ) p s) }
+    ">="                        { tok (\p s -> T (TokenGTE) p s) }
+    ">"                         { tok (\p s -> T (TokenGT) p s) }
+    "&"                         { tok (\p s -> T (TokenAnd) p s) }
+    "|"                         { tok (\p s -> T (TokenOr) p s) }
+    let                         { tok (\p s -> T (TokenLet) p s) }
+    letrec                      { tok (\p s -> T (TokenLetRec) p s) }
+    in                          { tok (\p s -> T (TokenIn) p s) }
+    case                        { tok (\p s -> T (TokenCase) p s) }
+    of                          { tok (\p s -> T (TokenOf) p s) }
+    "->"                        { tok (\p s -> T (TokenArrow) p s) }
+    Pack                        { tok (\p s -> T (TokenPack) p s) }
+    "{"                         { tok (\p s -> T (TokenLBrace) p s) }
+    "}"                         { tok (\p s -> T (TokenRBrace) p s) }
+    "("                         { tok (\p s -> T (TokenLParen) p s) }
+    ")"                         { tok (\p s -> T (TokenRParen) p s) }
+    ";"                         { tok (\p s -> T (TokenSemiColon) p s) }
+    ","                         { tok (\p s -> T (TokenComma) p s) }
+    @id                         { tok (\p s -> T (TokenSym) p s) }
 
 {
 
-data Token = TokenInt Int
-           | TokenString String
-           | TokenChar Char
-           | TokenSym String
+tok f p s = f p s
+
+data Token = T TokenClass AlexPosn String
+
+data TokenClass = TokenInt
+           | TokenSym
            | TokenAdd
            | TokenMin
            | TokenMul
@@ -89,7 +89,12 @@ data Token = TokenInt Int
            | TokenRParen
            | TokenSemiColon
            | TokenComma
+           | TokenEOF
            deriving (Eq, Show)
 
+showPos :: AlexPosn -> String
+showPos (AlexPn _ l c) = show l ++ ":" ++ show c
+
+scanTokens :: String -> [Token]
 scanTokens = alexScanTokens
 }

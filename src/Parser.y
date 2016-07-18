@@ -9,36 +9,36 @@ import Types
 %error { parseError }
 
 %token
-    int             { TokenInt $$ }
-    var             { TokenSym $$ }
-    '+'             { TokenAdd }
-    '-'             { TokenMin }
-    '*'             { TokenMul }
-    '/'             { TokenDiv }
-    '='             { TokenAssign }
-    lambda            { TokenLamVars }
-    '.'             { TokenLamExpr }
-    lt              { TokenLT }
-    lte             { TokenLTE }
-    eq              { TokenEQ }
-    neq             { TokenNEQ }
-    gte             { TokenGTE }
-    gt              { TokenGT }
-    and             { TokenAnd }
-    or              { TokenOr }
-    let             { TokenLet }
-    letrec          { TokenLetRec }
-    in              { TokenIn }
-    case            { TokenCase }
-    of              { TokenOf }
-    arrow           { TokenArrow }
-    Pack            { TokenPack }
-    '{'             { TokenLBrace }
-    '}'             { TokenRBrace }
-    '('             { TokenLParen }
-    ')'             { TokenRParen }
-    ';'             { TokenSemiColon }
-    ','             { TokenComma }
+    int             { T TokenInt p $$ }
+    var             { T TokenSym p $$ }
+    '+'             { T TokenAdd p _ }
+    '-'             { T TokenMin p _ }
+    '*'             { T TokenMul p _ }
+    '/'             { T TokenDiv p _ }
+    '='             { T TokenAssign p _ }
+    lambda          { T TokenLamVars p _ }
+    '.'             { T TokenLamExpr p _ }
+    lt              { T TokenLT p _ }
+    lte             { T TokenLTE p _ }
+    eq              { T TokenEQ p _ }
+    neq             { T TokenNEQ p _ }
+    gte             { T TokenGTE p _ }
+    gt              { T TokenGT p _ }
+    and             { T TokenAnd p _ }
+    or              { T TokenOr p _ }
+    let             { T TokenLet p _ }
+    letrec          { T TokenLetRec p _ }
+    in              { T TokenIn p _ }
+    case            { T TokenCase p _ }
+    of              { T TokenOf p _ }
+    arrow           { T TokenArrow p _ }
+    Pack            { T TokenPack p _ }
+    '{'             { T TokenLBrace p _ }
+    '}'             { T TokenRBrace p _ }
+    '('             { T TokenLParen p _ }
+    ')'             { T TokenRParen p _ }
+    ';'             { T TokenSemiColon p _ }
+    ','             { T TokenComma p _ }
 
 
 
@@ -77,8 +77,8 @@ expr : expr aexpr                           { EAp $1 $2 }
      | aexpr                                { $1 }
 
 aexpr : var                                 { EVar $1 }
-      | int                                 { ENum $1 }
-      | Pack '{' int ',' int '}' '('exprs')'    { EConstr $3 $5 $8}
+      | int                                 { ENum (read $1 :: Int) }
+      | Pack '{' int ',' int '}' '('exprs')'    { EConstr (read $3 :: Int) (read $5 :: Int) $8}
       | '('expr')'                          { $2 }
 
 exprs :                                     { [] }
@@ -95,12 +95,15 @@ defn : var '=' expr                         { ($1, $3) }
 alts : alt ';'                                 { [$1] }
      | alt ';' alts                         { $1 : $3 }
 
-alt : lt int gt vars arrow expr             { ($2, $4, $6) }
+alt : lt int gt vars arrow expr             { ((read $2 :: Int), $4, $6) }
 
 {
 
 parseError :: [Token] -> a
-parseError _ = error "Parse error"
-    
+parseError ts =
+  case ts of
+    [] -> error "unexpected end of file"
+    (T t p s):_ ->
+      error $ "parse error at " ++ showPos p ++ " - unexpected " ++ show t    
 
 }
