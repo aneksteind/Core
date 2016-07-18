@@ -29,7 +29,6 @@ The project itself is broken into the following series of steps:
 - Evaluation by the G-Machine
   
 ## To Do
-- implement better parse error handling in Alex/Happy
 - implement lambda lifting
 - possibly implement GmState as a State monad
 - implement the stack project as a library
