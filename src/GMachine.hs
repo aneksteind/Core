@@ -413,8 +413,8 @@ printt state =
       appP xs = take (2 * (length xs)) $ cycle [Eval, Print]
       maybeNode = hLookup heap a in 
   case maybeNode of 
-    Just (NNum n) -> putStack as $ putOutput (output ++ (show n)) state
-    Just (NConstr t s) -> putOutput ("<" ++ show t ++ "> ") $ putCode ((appP s)++i) $ putStack (s++as) state
+    Just (NNum n) -> putStack as $ putOutput (output ++ " " ++ (show n)) state
+    Just (NConstr t s) -> putOutput ("<" ++ show t ++ ">") $ putCode ((appP s)++i) $ putStack (s++as) state
     _ -> error $ "address " ++ show a ++ " not found in heap"
 
 -- gets a number or a data type's #args from the heap

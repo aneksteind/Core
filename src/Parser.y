@@ -103,7 +103,7 @@ parseError :: [Token] -> a
 parseError ts =
   case ts of
     [] -> error "unexpected end of file"
-    (T t p s):_ ->
-      error $ "parse error at " ++ showPos p ++ " - unexpected " ++ show t    
+    token@(T t p s):_ ->
+      error $ "parse error " ++ showPos p ++ " - unexpected '" ++ show token ++ "'"
 
 }

@@ -93,8 +93,41 @@ data TokenClass = TokenInt
            deriving (Eq, Show)
 
 showPos :: AlexPosn -> String
-showPos (AlexPn _ l c) = show l ++ ":" ++ show c
+showPos (AlexPn _ l c) = "line " ++ show l ++ ":" ++ show c
 
 scanTokens :: String -> [Token]
 scanTokens = alexScanTokens
+
+instance Show Token where
+  show (T TokenSym _ s) = s
+  show (T TokenInt _ i) = show i
+  show (T TokenAdd _ _) = "+"
+  show (T TokenMin _ _) = "-"
+  show (T TokenMul _ _) = "*"
+  show (T TokenDiv _ _) = "/"
+  show (T TokenAssign _ _) = "="
+  show (T TokenLamVars _ _) = "\\"
+  show (T TokenLamExpr _ _) = "."
+  show (T TokenLT _ _) = "<"
+  show (T TokenLTE _ _) = "<="
+  show (T TokenEQ _ _) = "=="
+  show (T TokenNEQ _ _) = "/="
+  show (T TokenGTE _ _) = ">="
+  show (T TokenGT _ _) = ">"
+  show (T TokenAnd _ _) = "&"
+  show (T TokenOr _ _) = "|"
+  show (T TokenLet _ _) = "let"
+  show (T TokenLetRec _ _) = "letrec"
+  show (T TokenIn _ _) = "in"
+  show (T TokenCase _ _) = "case"
+  show (T TokenOf _ _) = "of"
+  show (T TokenArrow _ _) = "->"
+  show (T TokenPack _ _) = "Pack"
+  show (T TokenLBrace _ _) = "{"
+  show (T TokenRBrace _ _) = "}"
+  show (T TokenLParen _ _) = "("
+  show (T TokenRParen _ _) = ")"
+  show (T TokenSemiColon _ _) = ";"
+  show (T TokenComma _ _) = ","
+  show (T TokenEOF _ _) = "EOF"
 }
