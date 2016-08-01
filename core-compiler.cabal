@@ -1,6 +1,7 @@
 name:                core-compiler
 version:             0.1.0.0
-synopsis:            Initial project template from stack
+synopsis:            compile your own mini functional language with Core
+stability:           functional
 description:         Please see README.md
 homepage:            https://github.com/aneksteind/Core#readme
 license:             MIT
@@ -8,7 +9,7 @@ license-file:        LICENSE
 author:              David Anekstein
 maintainer:          aneksteind@gmail.com
 copyright:           2016 David Anekstein
-category:            Web
+category:            Compiler, Language
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
