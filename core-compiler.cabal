@@ -2,33 +2,42 @@ name:                core-compiler
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/githubuser/core-compiler#readme
-license:             BSD3
+homepage:            https://github.com/aneksteind/Core#readme
+license:             MIT
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author name here
+author:              David Anekstein
+maintainer:          aneksteind@gmail.com
+copyright:           2016 David Anekstein
 category:            Web
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
 
+library
+  hs-source-dirs:      src
+  exposed-modules:     Core.Compiler,
+                       Core.GMachine,
+                       Core.Grammar,
+                       Core.Prelude,
+                       Core.Pretty
+  other-modules:       Core.G
+  build-depends:       base >= 4.7 && < 5,
+                       unordered-containers,
+                       containers,
+                       text
+  default-language:    Haskell2010
+
 executable core-compiler-exe
   main-is:             Main.hs
-  hs-source-dirs:      src
-  other-modules:       Parser
-                     , Lexer
-                     , Types
-                     , Pretty
-                     , Compiler
-                     , GMachine
-
-  build-depends:       base >=4.7
-                     , containers
-                     , array
+  hs-source-dirs:      app
+  build-depends:       base >=4.7,
+                       core-compiler,
+                       array
+  other-modules:       Lexer,
+                       Parser
   build-tools:         happy, alex
   default-language:    Haskell2010
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/core-compiler
+  location: https://github.com/aneksteind/Core
