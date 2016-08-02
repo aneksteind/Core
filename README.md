@@ -2,17 +2,22 @@
 
 *This compiler is based on the book [Implementing Functional Languages: A Tutorial](http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book/) by Simon Peyton Jones and David Lester.*
 
-As of this commit, the way to run this program is as follows:
+To download:  
+```
+stack install core-compiler
+```
+To run the example:  
 ```
 stack build  
-stack exec core-compiler [file] -- OR
+stack exec core-compiler [file] 
+```
+OR  
+```
 stack exec core-compiler run-steps [file]
 ```
-The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works.
+The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works. There are example Core programs in the ```SamplePrograms``` folder
 
 As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
-
-When the project is ready, I will export a library to hackage that will sort of streamline the process of linking to the core compiler, sort of like connecting to LLVM IR in the llvm-general package.
 
 ##About the Project
 
@@ -31,9 +36,7 @@ The project itself is broken into the following series of steps:
 ## To Do
 - implement lambda lifting
 - possibly implement GmState as a State monad
-- implement the stack project as a library
-- generate documentation on Haddock
-- upload to Hackage
+- better error handling, maybe with monad transformers
 
 More information will be added soon ...
 
