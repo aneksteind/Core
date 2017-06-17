@@ -9,11 +9,11 @@ stack install core-compiler
 To run the example:  
 ```
 stack build  
-stack exec core-compiler [file] 
+stack exec core-compiler-exe [file] 
 ```
 OR  
 ```
-stack exec core-compiler run-steps [file]
+stack exec core-compiler-exe run-steps [file]
 ```
 The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works. There are example Core programs in the ```SamplePrograms``` folder
 
