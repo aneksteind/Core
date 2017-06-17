@@ -1,8 +1,8 @@
 name:                core-compiler
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            compile your own mini functional language with Core
 stability:           functional
-description:         Please see README.md
+description:         This package doubles as a compiler and as a module with which anyone can compile their own functional programming language by parsing into the 'CoreExpr' datatype
 homepage:            https://github.com/aneksteind/Core#readme
 license:             MIT
 license-file:        LICENSE
