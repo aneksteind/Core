@@ -1,4 +1,4 @@
-#Core
+# Core
 
 *This compiler is based on the book [Implementing Functional Languages: A Tutorial](http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book/) by Simon Peyton Jones and David Lester.*
 
@@ -19,7 +19,7 @@ The option ```run-steps``` will print out each step the G-Machine makes in evalu
 
 As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
 
-##About the Project
+## About the Project
 
 The Core language is a simple functional language that many other functional languages (such as Haskell) can be compiled to. In the book, as well as in this implementation, Core is compiled to G-Code (which can be further translated into C or machine code), and later interpreted by the G-Machine. The grammar of Core in this implementation is ever so slightly different than what is in the book (for readability), but it had no affects on the compiler itself.
 
@@ -37,6 +37,7 @@ The project itself is broken into the following series of steps:
 - implement lambda lifting
 - possibly implement GmState as a State monad
 - better error handling, maybe with monad transformers
+- docs are currently not being generated on Hackage, somehow fix this
 
 More information will be added soon ...
 
