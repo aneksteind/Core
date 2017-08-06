@@ -2,6 +2,8 @@
 
 *This compiler is based on the book [Implementing Functional Languages: A Tutorial](http://research.microsoft.com/en-us/um/people/simonpj/Papers/pj-lester-book/) by Simon Peyton Jones and David Lester.*
 
+##[Documentation](http://hackage.haskell.org/package/core-compiler-0.1.0.2)
+
 To download:  
 ```
 stack install core-compiler
