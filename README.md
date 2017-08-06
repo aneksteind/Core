@@ -37,8 +37,8 @@ The project itself is broken into the following series of steps:
 - implement lambda lifting
 - possibly implement GmState as a State monad
 - better error handling, maybe with monad transformers
-- docs are currently not being generated on Hackage, somehow fix this
 
-More information will be added soon ...
+## Contributing
+If you'd like to make this project even better, I encourage contribution. Currently, I am working on other projects and don't have as much time as I'd like to work with this. The todo list is a good place to start; the lambda lifting for example is a well documented addition in the book mentioned above, and the error handling would not be too large of an undertaking.
 
     
