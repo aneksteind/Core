@@ -19,13 +19,13 @@ stack exec core-compiler-exe run-steps [file]
 ```
 The option ```run-steps``` will print out each step the G-Machine makes in evaluating the program, to help the user learn how it works. There are example Core programs in the ```SamplePrograms``` folder
 
-As the project currently stands, anyone who wants to create a simple functional language can do so by parsing it into the Core Expression AST found in this project. 
+As the project currently stands, anyone who wants to create a very simple functional language can do so by parsing it into the Core Expression AST found in this project. 
 
 ## About the Project
 
-The Core language is a simple functional language that many other functional languages (such as Haskell) can be compiled to. In the book, as well as in this implementation, Core is compiled to G-Code (which can be further translated into C or machine code), and later interpreted by the G-Machine. The grammar of Core in this implementation is ever so slightly different than what is in the book (for readability), but it had no affects on the compiler itself.
+The Core language is a simple functional language that other functional languages (such as Haskell) can be compiled to. In the book, as well as in this implementation, Core is compiled to G-Code (which can be further compiled to C or machine code) or later interpreted by the G-Machine. The grammar of Core in this implementation is ever so slightly different than what is in the book (for readability), but this change had no affects on the compiler itself.
 
-This project was meant to introduce me to the world of compilers as well as state transition and stack machines. I believe that it was a great next step after the [interpreter](https://github.com/aneksteind/Shkeem) that I implemented earlier and before writing a compiler that targets the machine itself. 
+This project was meant to introduce me to the world of compilers as well as state transition and stack machines. I believe that it was a great next step following the Scheme the [interpreter](https://github.com/aneksteind/Shkeem) tried previously. 
 
 This project will be updated here and there to improve efficiency (there are many places where this can and will be done), readability, error handling, and abstraction. **_As such, this is still a work in progress._**
 
@@ -36,11 +36,13 @@ The project itself is broken into the following series of steps:
 - Evaluation by the G-Machine
   
 ## To Do
-- implement lambda lifting
+- implement lambda expressions and lambda lifting 
 - possibly implement GmState as a State monad
-- better error handling, maybe with monad transformers
+- consider Reader for the environment during evalutation in the G machine
+- fix odd syntax such as double semi-colons
+- better error handling
 
 ## Contributing
-If you'd like to make this project even better, I encourage contribution. Currently, I am working on other projects and don't have as much time as I'd like to work with this. The todo list is a good place to start; the lambda lifting for example is a well documented addition in the book mentioned above, and the error handling would not be too large of an undertaking.
+If you'd like to make this project even better, I encourage contribution in the form of pull requests. The todo list is a good place to start; the lambda lifting for example is a well documented addition in the book mentioned above, and the error handling would not be too large of an undertaking.
 
     
