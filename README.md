@@ -40,6 +40,7 @@ The project itself is broken into the following series of steps:
 - consider Reader for the environment during evalutation in the G machine
 - fix odd syntax such as double semi-colons
 - better error handling
+- replace `String` with `Text`
 
 ## Contributing
 If you'd like to make this project even better, I encourage contribution in the form of pull requests. The todo list is a good place to start; the lambda lifting for example is a well documented addition in the book mentioned above, and the error handling would not be too large of an undertaking.
